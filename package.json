@@ -1,0 +1,76 @@
+{
+  "name": "my-git-php-formatter",
+  "version": "1.0.0",
+  "description": "Format changed PHP lines from git diff and optionally run on save.",
+  "displayName": "My Git PHP Formatter",
+  "publisher": "finn",
+  "main": "./extension.js",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Formatters",
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:myGitPhpFormatter.formatChangedFiles",
+    "onCommand:myGitPhpFormatter.formatCurrentFile",
+    "onLanguage:php"
+  ],
+  "bin": {
+    "format-range": "./bin/format-range.js"
+  },
+  "scripts": {
+    "format-range": "node ./bin/format-range.js",
+    "package:vsix": "vsce package --allow-missing-repository",
+    "package:vsix:pre-release": "vsce package --pre-release --allow-missing-repository",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "contributes": {
+    "commands": [
+      {
+        "command": "myGitPhpFormatter.formatChangedFiles",
+        "title": "My Git PHP Formatter: Format Changed PHP Files"
+      },
+      {
+        "command": "myGitPhpFormatter.formatCurrentFile",
+        "title": "My Git PHP Formatter: Format Current PHP File"
+      }
+    ],
+    "configuration": {
+      "title": "My Git PHP Formatter",
+      "properties": {
+        "myGitPhpFormatter.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable My Git PHP Formatter."
+        },
+        "myGitPhpFormatter.formatOnSave": {
+          "type": "boolean",
+          "default": false,
+          "description": "Format only the changed PHP lines of the saved file. New files are formatted as a whole document."
+        },
+        "myGitPhpFormatter.showNotifications": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show information and warning messages for manual commands."
+        },
+        "myGitPhpFormatter.debug": {
+          "type": "boolean",
+          "default": false,
+          "description": "Write verbose logs to the My Git PHP Formatter output channel."
+        }
+      }
+    }
+  },
+  "author": "",
+  "license": "ISC",
+  "overrides": {
+    "cheerio": "1.0.0-rc.12"
+  },
+  "devDependencies": {
+    "@vscode/vsce": "2.24.0",
+    "intelephense": "^1.16.5",
+    "vscode-jsonrpc": "^8.2.1"
+  }
+}
