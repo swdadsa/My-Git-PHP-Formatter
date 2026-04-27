@@ -3,6 +3,9 @@ const fs = require("node:fs");
 const { execFile } = require("node:child_process");
 const vscode = require("vscode");
 
+const DIFF_RANGE_HEADER = /^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@/;
+const PHP_PATHSPECS = ["--", "*.php", ":(glob)**/*.php"];
+
 function execGit(args, cwd) {
   return new Promise((resolve, reject) => {
     execFile("git", args, { cwd, encoding: "utf8" }, (error, stdout, stderr) => {
@@ -110,6 +113,8 @@ async function getDocumentChangeInfo(uri, log) {
   };
 }
 
+// Repository discovery -------------------------------------------------------
+
 async function findRepoRoot(startPath) {
   try {
     const stat = fs.statSync(startPath);
@@ -120,6 +125,8 @@ async function findRepoRoot(startPath) {
     return null;
   }
 }
+
+// Changed file discovery -----------------------------------------------------
 
 async function listTrackedPhpChanges(repoRoot) {
   const hasHead = await repositoryHasHead(repoRoot);
@@ -178,6 +185,8 @@ async function listUntrackedPhpFiles(repoRoot) {
     .filter(Boolean);
 }
 
+// Diff range parsing ---------------------------------------------------------
+
 async function getDiffRanges(repoRoot, relativePath) {
   if (!(await repositoryHasHead(repoRoot))) {
     return [];
@@ -193,10 +202,9 @@ async function getDiffRanges(repoRoot, relativePath) {
 
 function parseDiffRanges(diffText) {
   const ranges = [];
-  const regex = /^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@/;
 
   for (const line of diffText.split(/\r?\n/)) {
-    const match = line.match(regex);
+    const match = line.match(DIFF_RANGE_HEADER);
     if (!match) {
       continue;
     }
@@ -240,6 +248,8 @@ function mergeRanges(ranges) {
   return merged;
 }
 
+// Small git helpers ----------------------------------------------------------
+
 async function repositoryHasHead(repoRoot) {
   try {
     await execGit(["rev-parse", "--verify", "HEAD"], repoRoot);
@@ -258,7 +268,7 @@ async function listNameOnly(repoRoot, args) {
 }
 
 function getPhpPathspecArgs() {
-  return ["--", "*.php", ":(glob)**/*.php"];
+  return PHP_PATHSPECS;
 }
 
 module.exports = {

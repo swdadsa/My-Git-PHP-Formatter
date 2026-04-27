@@ -1,7 +1,22 @@
 const vscode = require("vscode");
 
+const MIXED_HTML_TAG_THRESHOLD = 4;
+const PHP_BLOCK_PATTERN = /<\?(?:php|=)?[\s\S]*?\?>/gi;
+const HTML_TAG_PATTERN = /<\/?[a-z][\w:-]*(?:\s[^<>]*?)?>/gi;
+
 function isPhpFileDocument(document) {
   return document.uri.scheme === "file" && document.languageId === "php";
+}
+
+function isLikelyMixedHtmlDocument(document) {
+  if (!isPhpFileDocument(document)) {
+    return false;
+  }
+
+  const nonPhpSegments = document.getText().replace(PHP_BLOCK_PATTERN, "\n");
+  const tagMatches = nonPhpSegments.match(HTML_TAG_PATTERN) || [];
+
+  return tagMatches.length >= MIXED_HTML_TAG_THRESHOLD;
 }
 
 async function formatDocumentWhole(document, log) {
@@ -25,6 +40,9 @@ async function formatChangedDocument(document, ranges, log) {
   }
 
   let hasChanges = false;
+
+  // Range edits are applied from bottom to top so earlier edits do not shift
+  // the line numbers of later diff hunks.
   const descending = [...ranges].sort((left, right) => right.startLine - left.startLine);
 
   for (const rangeInfo of descending) {
@@ -102,5 +120,6 @@ function getFormattingOptions(document) {
 module.exports = {
   formatChangedDocument,
   formatDocumentWhole,
+  isLikelyMixedHtmlDocument,
   isPhpFileDocument,
 };

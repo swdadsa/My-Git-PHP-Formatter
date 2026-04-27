@@ -1,6 +1,6 @@
 {
   "name": "my-git-php-formatter",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Format changed PHP lines from git diff and optionally run on save.",
   "displayName": "My Git PHP Formatter",
   "publisher": "finn",
@@ -17,11 +17,7 @@
     "onCommand:myGitPhpFormatter.formatCurrentFile",
     "onLanguage:php"
   ],
-  "bin": {
-    "format-range": "./bin/format-range.js"
-  },
   "scripts": {
-    "format-range": "node ./bin/format-range.js",
     "package:vsix": "vsce package --allow-missing-repository",
     "package:vsix:pre-release": "vsce package --pre-release --allow-missing-repository",
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -49,6 +45,11 @@
           "type": "boolean",
           "default": false,
           "description": "Format only the changed PHP lines of the saved file. New files are formatted as a whole document."
+        },
+        "myGitPhpFormatter.skipMixedHtmlDocuments": {
+          "type": "boolean",
+          "default": true,
+          "description": "Skip formatting PHP files that appear to contain substantial HTML markup."
         },
         "myGitPhpFormatter.showNotifications": {
           "type": "boolean",
