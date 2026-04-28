@@ -4,11 +4,15 @@ const {
   formatChangedDocument,
   formatDocumentWhole,
 } = require("./formatter");
+const { normalizeOperatorSpacing } = require("./operatorSpacingFixer");
 const {
   getActivePhpDocument,
   shouldSkipDocument,
 } = require("./documentGuards");
 
+/**
+ * Formats all changed PHP files in the current workspace.
+ */
 async function formatChangedFiles({ log, notify }) {
   const workspaceFolders = vscode.workspace.workspaceFolders || [];
   if (workspaceFolders.length === 0) {
@@ -25,6 +29,9 @@ async function formatChangedFiles({ log, notify }) {
   notify.info(buildChangedFilesMessage(result));
 }
 
+/**
+ * Formats the active PHP document when it has git changes.
+ */
 async function formatCurrentFile({ log, notify }) {
   const document = getActivePhpDocument();
   if (!document) {
@@ -51,6 +58,9 @@ async function formatCurrentFile({ log, notify }) {
   notify.info(changed ? "Formatted the current PHP file." : "No formatting changes were needed.");
 }
 
+/**
+ * Formats one saved PHP document from the save event path.
+ */
 async function formatSavedDocument(document, { log }) {
   const info = await getDocumentChangeInfo(document.uri, log);
   if (!info || !info.hasChanges || shouldSkipDocument(document, log)) {
@@ -60,6 +70,9 @@ async function formatSavedDocument(document, { log }) {
   return formatDocumentFromChangeInfo(document, info, log);
 }
 
+/**
+ * Formats each changed file entry and tracks how many files were skipped.
+ */
 async function formatChangedFileEntries(changedFiles, log) {
   const result = {
     formattedCount: 0,
@@ -83,12 +96,21 @@ async function formatChangedFileEntries(changedFiles, log) {
   return result;
 }
 
-function formatDocumentFromChangeInfo(document, info, log) {
-  return info.isNew
-    ? formatDocumentWhole(document, log)
-    : formatChangedDocument(document, info.ranges, log);
+/**
+ * Runs the VS Code formatter and then applies optional project-specific fixers.
+ */
+async function formatDocumentFromChangeInfo(document, info, log) {
+  const formatted = info.isNew
+    ? await formatDocumentWhole(document, log)
+    : await formatChangedDocument(document, info.ranges, log);
+  const fixedOperators = await normalizeOperatorSpacing(document, info, log);
+
+  return formatted || fixedOperators;
 }
 
+/**
+ * Builds the user-facing summary for the changed-files command.
+ */
 function buildChangedFilesMessage({ formattedCount, skippedCount }) {
   if (formattedCount > 0 && skippedCount > 0) {
     return `Formatted ${formattedCount} changed PHP file(s) and skipped ${skippedCount} mixed PHP/HTML file(s).`;

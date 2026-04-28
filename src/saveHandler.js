@@ -4,12 +4,18 @@ const { formatSavedDocument } = require("./formatWorkflow");
 
 const saveGuard = new Set();
 
+/**
+ * Registers the format-on-save listener.
+ */
 function registerFormatOnSave(services) {
   return vscode.workspace.onDidSaveTextDocument((document) =>
     handleSavedDocument(document, services)
   );
 }
 
+/**
+ * Handles one saved document while preventing recursive save-triggered loops.
+ */
 async function handleSavedDocument(document, services) {
   const { log } = services;
 

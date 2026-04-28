@@ -6,6 +6,9 @@ const {
   formatCurrentFile,
 } = require("./formatWorkflow");
 
+/**
+ * Registers all command palette commands exposed by the extension.
+ */
 function registerCommands(services) {
   return [
     vscode.commands.registerCommand(COMMANDS.formatChangedFiles, () =>
@@ -17,6 +20,9 @@ function registerCommands(services) {
   ];
 }
 
+/**
+ * Wraps manual commands with enabled-state checks and user-facing error handling.
+ */
 async function runManualCommand(work, { log, notify }) {
   try {
     if (!isExtensionEnabled()) {

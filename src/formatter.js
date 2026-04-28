@@ -4,10 +4,16 @@ const MIXED_HTML_TAG_THRESHOLD = 4;
 const PHP_BLOCK_PATTERN = /<\?(?:php|=)?[\s\S]*?\?>/gi;
 const HTML_TAG_PATTERN = /<\/?[a-z][\w:-]*(?:\s[^<>]*?)?>/gi;
 
+/**
+ * Returns whether a document is a local PHP file.
+ */
 function isPhpFileDocument(document) {
   return document.uri.scheme === "file" && document.languageId === "php";
 }
 
+/**
+ * Detects PHP files that likely contain enough HTML markup to make range formatting risky.
+ */
 function isLikelyMixedHtmlDocument(document) {
   if (!isPhpFileDocument(document)) {
     return false;
@@ -19,6 +25,9 @@ function isLikelyMixedHtmlDocument(document) {
   return tagMatches.length >= MIXED_HTML_TAG_THRESHOLD;
 }
 
+/**
+ * Runs the active VS Code document formatter for an entire PHP file.
+ */
 async function formatDocumentWhole(document, log) {
   if (!isPhpFileDocument(document)) {
     return false;
@@ -34,6 +43,9 @@ async function formatDocumentWhole(document, log) {
   return applyEditsAndSave(document, edits);
 }
 
+/**
+ * Runs the active VS Code range formatter for changed line ranges.
+ */
 async function formatChangedDocument(document, ranges, log) {
   if (!isPhpFileDocument(document) || ranges.length === 0) {
     return false;
@@ -86,6 +98,9 @@ async function formatChangedDocument(document, ranges, log) {
   return true;
 }
 
+/**
+ * Applies formatter edits to a document and saves it.
+ */
 async function applyEditsAndSave(document, edits) {
   const applied = await applyEdits(document.uri, edits);
   if (!applied) {
@@ -97,6 +112,9 @@ async function applyEditsAndSave(document, edits) {
   return true;
 }
 
+/**
+ * Applies raw VS Code text edits to a URI.
+ */
 async function applyEdits(uri, edits) {
   if (!Array.isArray(edits) || edits.length === 0) {
     return false;
@@ -107,6 +125,9 @@ async function applyEdits(uri, edits) {
   return vscode.workspace.applyEdit(workspaceEdit);
 }
 
+/**
+ * Reads editor formatting options for the target document.
+ */
 function getFormattingOptions(document) {
   const editorConfig = vscode.workspace.getConfiguration("editor", document.uri);
   const tabSize = editorConfig.get("tabSize");

@@ -5,6 +5,9 @@ const { createLogger } = require("./src/logger");
 const { createNotifier } = require("./src/notifications");
 const { registerFormatOnSave } = require("./src/saveHandler");
 
+/**
+ * Activates the extension and wires together shared services and VS Code hooks.
+ */
 function activate(context) {
   const output = vscode.window.createOutputChannel(OUTPUT_CHANNEL_NAME);
   const log = createLogger(output);
@@ -16,6 +19,9 @@ function activate(context) {
   context.subscriptions.push(registerFormatOnSave(services));
 }
 
+/**
+ * Placeholder for future cleanup when the extension is deactivated.
+ */
 function deactivate() {}
 
 module.exports = {

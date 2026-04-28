@@ -1,6 +1,6 @@
 {
   "name": "my-git-php-formatter",
-  "version": "1.0.1",
+  "version": "1.2.1",
   "description": "Format changed PHP lines from git diff and optionally run on save.",
   "displayName": "My Git PHP Formatter",
   "publisher": "finn",
@@ -50,6 +50,11 @@
           "type": "boolean",
           "default": true,
           "description": "Skip formatting PHP files that appear to contain substantial HTML markup."
+        },
+        "myGitPhpFormatter.normalizeOperatorSpacing": {
+          "type": "boolean",
+          "default": false,
+          "description": "Normalize whitespace around common PHP operators such as =, ===, =>, ??, &&, and || to a single space."
         },
         "myGitPhpFormatter.showNotifications": {
           "type": "boolean",

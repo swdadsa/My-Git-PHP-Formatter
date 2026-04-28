@@ -12,6 +12,7 @@ Format only the changed PHP lines from git diff. New PHP files are formatted as 
 - `myGitPhpFormatter.enabled`
 - `myGitPhpFormatter.formatOnSave`
 - `myGitPhpFormatter.skipMixedHtmlDocuments`
+- `myGitPhpFormatter.normalizeOperatorSpacing`
 - `myGitPhpFormatter.showNotifications`
 - `myGitPhpFormatter.debug`
 
@@ -21,6 +22,7 @@ Format only the changed PHP lines from git diff. New PHP files are formatted as 
 - If you want Intelephense to handle formatting, set it as the default PHP formatter in VS Code.
 - Format on save only affects the file that was just saved.
 - By default, files that look like mixed PHP/HTML templates are skipped to avoid full-file reformatting from range format providers.
+- Operator spacing normalization is optional and only affects real PHP operators in the formatted changed ranges.
 
 ## Project Structure
 
@@ -29,6 +31,7 @@ Format only the changed PHP lines from git diff. New PHP files are formatted as 
 - `src/formatWorkflow.js`: high-level formatting flows for changed files, current file, and save events.
 - `src/git.js`: git repository discovery, changed PHP file discovery, and diff hunk parsing.
 - `src/formatter.js`: VS Code formatter calls and PHP document detection.
+- `src/operatorSpacingFixer.js`: optional post-format fixer for operator whitespace.
 - `src/saveHandler.js`: format-on-save event handling and save-loop guard.
 - `src/config.js`: extension setting reads.
 - `src/notifications.js`: user notification wrapper.

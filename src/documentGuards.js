@@ -5,6 +5,9 @@ const {
 } = require("./formatter");
 const { shouldSkipMixedHtmlDocuments } = require("./config");
 
+/**
+ * Returns the active editor document when it is a PHP file.
+ */
 function getActivePhpDocument() {
   const document = vscode.window.activeTextEditor
     ? vscode.window.activeTextEditor.document
@@ -13,6 +16,9 @@ function getActivePhpDocument() {
   return document && isPhpFileDocument(document) ? document : undefined;
 }
 
+/**
+ * Returns whether formatting should skip this document for safety reasons.
+ */
 function shouldSkipDocument(document, log) {
   if (!shouldSkipMixedHtmlDocuments()) {
     return false;

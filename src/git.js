@@ -6,6 +6,9 @@ const vscode = require("vscode");
 const DIFF_RANGE_HEADER = /^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@/;
 const PHP_PATHSPECS = ["--", "*.php", ":(glob)**/*.php"];
 
+/**
+ * Executes a git command and resolves with stdout.
+ */
 function execGit(args, cwd) {
   return new Promise((resolve, reject) => {
     execFile("git", args, { cwd, encoding: "utf8" }, (error, stdout, stderr) => {
@@ -20,6 +23,9 @@ function execGit(args, cwd) {
   });
 }
 
+/**
+ * Collects changed PHP files across all open workspace folders.
+ */
 async function collectChangedPhpFiles(workspaceFolders, log) {
   const results = [];
   const seenRepos = new Set();
@@ -64,6 +70,9 @@ async function collectChangedPhpFiles(workspaceFolders, log) {
   return results.sort((left, right) => left.uri.fsPath.localeCompare(right.uri.fsPath));
 }
 
+/**
+ * Returns the git change state for one document URI.
+ */
 async function getDocumentChangeInfo(uri, log) {
   if (uri.scheme !== "file") {
     return null;
@@ -115,6 +124,9 @@ async function getDocumentChangeInfo(uri, log) {
 
 // Repository discovery -------------------------------------------------------
 
+/**
+ * Finds the git repository root that contains a file or folder.
+ */
 async function findRepoRoot(startPath) {
   try {
     const stat = fs.statSync(startPath);
@@ -128,6 +140,9 @@ async function findRepoRoot(startPath) {
 
 // Changed file discovery -----------------------------------------------------
 
+/**
+ * Lists tracked PHP files that are modified or newly added against HEAD.
+ */
 async function listTrackedPhpChanges(repoRoot) {
   const hasHead = await repositoryHasHead(repoRoot);
   const modifiedFiles = hasHead
@@ -173,6 +188,9 @@ async function listTrackedPhpChanges(repoRoot) {
   return entries;
 }
 
+/**
+ * Lists untracked PHP files that are not ignored by git.
+ */
 async function listUntrackedPhpFiles(repoRoot) {
   const stdout = await execGit(
     ["ls-files", "--others", "--exclude-standard", ...getPhpPathspecArgs()],
@@ -187,6 +205,9 @@ async function listUntrackedPhpFiles(repoRoot) {
 
 // Diff range parsing ---------------------------------------------------------
 
+/**
+ * Parses git diff hunks into changed line ranges for a modified file.
+ */
 async function getDiffRanges(repoRoot, relativePath) {
   if (!(await repositoryHasHead(repoRoot))) {
     return [];
@@ -200,6 +221,9 @@ async function getDiffRanges(repoRoot, relativePath) {
   return mergeRanges(parseDiffRanges(stdout));
 }
 
+/**
+ * Converts unified diff hunk headers to 1-based changed line ranges.
+ */
 function parseDiffRanges(diffText) {
   const ranges = [];
 
@@ -225,6 +249,9 @@ function parseDiffRanges(diffText) {
   return ranges;
 }
 
+/**
+ * Merges overlapping or adjacent changed line ranges.
+ */
 function mergeRanges(ranges) {
   if (ranges.length <= 1) {
     return ranges;
@@ -250,6 +277,9 @@ function mergeRanges(ranges) {
 
 // Small git helpers ----------------------------------------------------------
 
+/**
+ * Returns whether the repository has an initial commit.
+ */
 async function repositoryHasHead(repoRoot) {
   try {
     await execGit(["rev-parse", "--verify", "HEAD"], repoRoot);
@@ -259,6 +289,9 @@ async function repositoryHasHead(repoRoot) {
   }
 }
 
+/**
+ * Runs a git command that returns one path per line.
+ */
 async function listNameOnly(repoRoot, args) {
   const stdout = await execGit(args, repoRoot);
   return stdout
@@ -267,6 +300,9 @@ async function listNameOnly(repoRoot, args) {
     .filter(Boolean);
 }
 
+/**
+ * Returns git pathspec arguments that match PHP files at any depth.
+ */
 function getPhpPathspecArgs() {
   return PHP_PATHSPECS;
 }
