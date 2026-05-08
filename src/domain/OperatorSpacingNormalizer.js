@@ -1,7 +1,3 @@
-const vscode = require("vscode");
-const { shouldNormalizeOperatorSpacing } = require("./config");
-const { isPhpFileDocument } = require("./formatter");
-
 const CODE_STATE = "code";
 const DOUBLE_QUOTE_STATE = "doubleQuote";
 const HEREDOC_STATE = "heredoc";
@@ -9,7 +5,7 @@ const LINE_COMMENT_STATE = "lineComment";
 const BLOCK_COMMENT_STATE = "blockComment";
 const SINGLE_QUOTE_STATE = "singleQuote";
 
-const FULL_OPERATOR_SPACING = [
+const DEFAULT_OPERATORS = [
   "!==",
   "===",
   "=>",
@@ -26,42 +22,65 @@ const FULL_OPERATOR_SPACING = [
 ];
 
 /**
- * Normalizes whitespace around configured PHP operators after formatter edits.
+ * Finds safe operator spacing edits inside PHP code ranges.
  */
-async function normalizeOperatorSpacing(document, info, log) {
-  if (!shouldNormalizeOperatorSpacing() || !isPhpFileDocument(document)) {
-    return false;
+class OperatorSpacingNormalizer {
+  constructor({ operators = DEFAULT_OPERATORS } = {}) {
+    this.operators = [...operators].sort((left, right) => right.length - left.length);
   }
 
-  const activeDocument = await vscode.workspace.openTextDocument(document.uri);
-  const targetRanges = getTargetRanges(activeDocument, info);
-  const edits = buildOperatorSpacingEdits(activeDocument.getText(), targetRanges);
+  /**
+   * Builds offset-based edits without touching strings, comments, or heredoc blocks.
+   */
+  buildEdits(text, ranges) {
+    const lineStarts = getLineStarts(text);
+    const targetOffsets = rangesToOffsets(ranges, lineStarts, text.length);
+    const hasPhpTags = text.includes("<?");
+    let inPhp = !hasPhpTags;
+    let state = CODE_STATE;
+    let heredocTerminator = null;
+    const edits = [];
 
-  if (edits.length === 0) {
-    return false;
+    for (let index = 0; index < text.length; index += 1) {
+      if (!inPhp) {
+        const tagStart = text.indexOf("<?", index);
+        if (tagStart === -1) {
+          break;
+        }
+
+        index = skipPhpOpenTag(text, tagStart);
+        inPhp = true;
+        continue;
+      }
+
+      if (state === CODE_STATE && text.startsWith("?>", index)) {
+        inPhp = false;
+        index += 1;
+        continue;
+      }
+
+      const stateResult = advanceScannerState(text, index, state, heredocTerminator);
+      state = stateResult.state;
+      heredocTerminator = stateResult.heredocTerminator;
+
+      if (stateResult.nextIndex !== index) {
+        index = stateResult.nextIndex;
+        continue;
+      }
+
+      const operator = findOperatorAt(text, index, this.operators);
+      if (state === CODE_STATE && operator) {
+        const edit = createOperatorEdit(text, index, operator, targetOffsets, lineStarts);
+        if (edit) {
+          edits.push(edit);
+        }
+
+        index += operator.length - 1;
+      }
+    }
+
+    return edits;
   }
-
-  const workspaceEdit = new vscode.WorkspaceEdit();
-  for (const edit of edits) {
-    workspaceEdit.replace(
-      activeDocument.uri,
-      new vscode.Range(
-        offsetToPosition(edit.startOffset, edit.lineStarts),
-        offsetToPosition(edit.endOffset, edit.lineStarts)
-      ),
-      ` ${edit.operator} `
-    );
-  }
-
-  const applied = await vscode.workspace.applyEdit(workspaceEdit);
-  if (!applied) {
-    return false;
-  }
-
-  log(`Normalized ${edits.length} operator spacing occurrence(s) in ${activeDocument.uri.fsPath}`);
-  const latestDocument = await vscode.workspace.openTextDocument(activeDocument.uri);
-  await latestDocument.save();
-  return true;
 }
 
 /**
@@ -78,60 +97,6 @@ function getTargetRanges(document, info) {
       endLine: Math.max(document.lineCount, 1),
     },
   ];
-}
-
-/**
- * Finds safe replacement ranges for configured operators outside strings and comments.
- */
-function buildOperatorSpacingEdits(text, ranges, operators = FULL_OPERATOR_SPACING) {
-  const lineStarts = getLineStarts(text);
-  const targetOffsets = rangesToOffsets(ranges, lineStarts, text.length);
-  const sortedOperators = [...operators].sort((left, right) => right.length - left.length);
-  const hasPhpTags = text.includes("<?");
-  let inPhp = !hasPhpTags;
-  let state = CODE_STATE;
-  let heredocTerminator = null;
-  const edits = [];
-
-  for (let index = 0; index < text.length; index += 1) {
-    if (!inPhp) {
-      const tagStart = text.indexOf("<?", index);
-      if (tagStart === -1) {
-        break;
-      }
-
-      index = skipPhpOpenTag(text, tagStart);
-      inPhp = true;
-      continue;
-    }
-
-    if (state === CODE_STATE && text.startsWith("?>", index)) {
-      inPhp = false;
-      index += 1;
-      continue;
-    }
-
-    const stateResult = advanceScannerState(text, index, state, heredocTerminator);
-    state = stateResult.state;
-    heredocTerminator = stateResult.heredocTerminator;
-
-    if (stateResult.nextIndex !== index) {
-      index = stateResult.nextIndex;
-      continue;
-    }
-
-    const operator = findOperatorAt(text, index, sortedOperators);
-    if (state === CODE_STATE && operator) {
-      const edit = createOperatorEdit(text, index, operator, targetOffsets, lineStarts);
-      if (edit) {
-        edits.push(edit);
-      }
-
-      index += operator.length - 1;
-    }
-  }
-
-  return edits;
 }
 
 /**
@@ -257,7 +222,9 @@ function readHeredocStart(text, index) {
  * Returns the configured operator that starts at an offset.
  */
 function findOperatorAt(text, offset, operators) {
-  return operators.find((operator) => text.startsWith(operator, offset) && isStandaloneOperator(text, offset, operator));
+  return operators.find((operator) => (
+    text.startsWith(operator, offset) && isStandaloneOperator(text, offset, operator)
+  ));
 }
 
 /**
@@ -335,26 +302,6 @@ function getLineStarts(text) {
     }
   }
   return starts;
-}
-
-/**
- * Converts an absolute text offset into a VS Code position.
- */
-function offsetToPosition(offset, lineStarts) {
-  let low = 0;
-  let high = lineStarts.length - 1;
-
-  while (low <= high) {
-    const middle = Math.floor((low + high) / 2);
-    if (lineStarts[middle] <= offset) {
-      low = middle + 1;
-    } else {
-      high = middle - 1;
-    }
-  }
-
-  const line = Math.max(high, 0);
-  return new vscode.Position(line, offset - lineStarts[line]);
 }
 
 /**
@@ -447,6 +394,7 @@ function isHorizontalWhitespace(character) {
 }
 
 module.exports = {
-  buildOperatorSpacingEdits,
-  normalizeOperatorSpacing,
+  OperatorSpacingNormalizer,
+  getLineStarts,
+  getTargetRanges,
 };

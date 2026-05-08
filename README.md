@@ -27,15 +27,19 @@ Format only the changed PHP lines from git diff. New PHP files are formatted as 
 ## Project Structure
 
 - `extension.js`: extension activation entrypoint.
-- `src/commands.js`: command registration and manual-command error handling.
-- `src/formatWorkflow.js`: high-level formatting flows for changed files, current file, and save events.
-- `src/git.js`: git repository discovery, changed PHP file discovery, and diff hunk parsing.
-- `src/formatter.js`: VS Code formatter calls and PHP document detection.
-- `src/operatorSpacingFixer.js`: optional post-format fixer for operator whitespace.
-- `src/saveHandler.js`: format-on-save event handling and save-loop guard.
-- `src/config.js`: extension setting reads.
-- `src/notifications.js`: user notification wrapper.
-- `src/logger.js`: output-channel logger.
+- `src/container.js`: wires services, use cases, and VS Code integration together.
+- `src/presentation/`: VS Code command and save-event entrypoints.
+- `src/application/`: formatting use cases and workflow orchestration.
+- `src/domain/`: pure formatting rules, such as mixed HTML detection and operator spacing scanning.
+- `src/infrastructure/`: adapters for git, VS Code formatting, settings, logging, and notifications.
+- `src/constants.js`: shared command IDs and configuration constants.
+
+The project uses a lightweight layered architecture:
+
+- Presentation receives VS Code events and delegates work.
+- Application coordinates the formatting workflow.
+- Domain contains rules that can be understood without VS Code or git.
+- Infrastructure touches external APIs such as VS Code, git, and the filesystem.
 
 ## Package As VSIX
 

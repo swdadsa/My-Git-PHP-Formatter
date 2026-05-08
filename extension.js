@@ -1,20 +1,14 @@
-const vscode = require("vscode");
-const { OUTPUT_CHANNEL_NAME } = require("./src/constants");
-const { registerCommands } = require("./src/commands");
-const { createLogger } = require("./src/logger");
-const { createNotifier } = require("./src/notifications");
-const { registerFormatOnSave } = require("./src/saveHandler");
+const { createExtensionServices } = require("./src/container");
+const { registerCommands } = require("./src/presentation/commands");
+const { registerFormatOnSave } = require("./src/presentation/saveHandler");
 
 /**
  * Activates the extension and wires together shared services and VS Code hooks.
  */
 function activate(context) {
-  const output = vscode.window.createOutputChannel(OUTPUT_CHANNEL_NAME);
-  const log = createLogger(output);
-  const notify = createNotifier();
-  const services = { log, notify };
+  const services = createExtensionServices();
 
-  context.subscriptions.push(output);
+  context.subscriptions.push(services.output);
   context.subscriptions.push(...registerCommands(services));
   context.subscriptions.push(registerFormatOnSave(services));
 }
