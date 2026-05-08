@@ -1,5 +1,5 @@
 const vscode = require("vscode");
-const { CONFIG_SECTION } = require("../constants");
+const { CONFIG_SECTION } = require("../../constants");
 
 /**
  * Reads extension settings from the VS Code configuration namespace.

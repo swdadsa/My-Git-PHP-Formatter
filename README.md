@@ -29,9 +29,16 @@ Format only the changed PHP lines from git diff. New PHP files are formatted as 
 - `extension.js`: extension activation entrypoint.
 - `src/container.js`: wires services, use cases, and VS Code integration together.
 - `src/presentation/`: VS Code command and save-event entrypoints.
-- `src/application/`: formatting use cases and workflow orchestration.
-- `src/domain/`: pure formatting rules, such as mixed HTML detection and operator spacing scanning.
-- `src/infrastructure/`: adapters for git, VS Code formatting, settings, logging, and notifications.
+- `src/application/useCases/`: user-facing workflows such as formatting changed files or the current file.
+- `src/application/services/`: shared application workflow orchestration.
+- `src/application/policies/`: application-level decisions, such as whether a document should be skipped.
+- `src/domain/mixedHtml/`: pure mixed PHP/HTML detection rules.
+- `src/domain/operatorSpacing/`: pure operator spacing scanning and edit planning.
+- `src/infrastructure/git/`: git repository and diff adapters.
+- `src/infrastructure/vscode/`: VS Code document, formatter, and edit adapters.
+- `src/infrastructure/config/`: VS Code setting reads.
+- `src/infrastructure/logging/`: output-channel logging.
+- `src/infrastructure/notification/`: VS Code user notifications.
 - `src/constants.js`: shared command IDs and configuration constants.
 
 The project uses a lightweight layered architecture:

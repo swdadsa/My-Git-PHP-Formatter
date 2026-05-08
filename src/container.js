@@ -1,19 +1,19 @@
 const vscode = require("vscode");
 const { OUTPUT_CHANNEL_NAME } = require("./constants");
-const { DocumentFormatPolicy } = require("./application/DocumentFormatPolicy");
-const { FormatChangedFilesUseCase } = require("./application/FormatChangedFilesUseCase");
-const { FormatCurrentFileUseCase } = require("./application/FormatCurrentFileUseCase");
-const { FormatSavedDocumentUseCase } = require("./application/FormatSavedDocumentUseCase");
-const { FormattingWorkflow } = require("./application/FormattingWorkflow");
-const { MixedHtmlDetector } = require("./domain/MixedHtmlDetector");
-const { OperatorSpacingNormalizer } = require("./domain/OperatorSpacingNormalizer");
-const { ConfigService } = require("./infrastructure/ConfigService");
-const { GitChangeProvider } = require("./infrastructure/GitChangeProvider");
-const { Logger } = require("./infrastructure/Logger");
-const { Notifier } = require("./infrastructure/Notifier");
-const { VscodeDocumentService } = require("./infrastructure/VscodeDocumentService");
-const { VscodeOperatorSpacingFixer } = require("./infrastructure/VscodeOperatorSpacingFixer");
-const { VscodePhpFormatter } = require("./infrastructure/VscodePhpFormatter");
+const { DocumentFormatPolicy } = require("./application/policies/DocumentFormatPolicy");
+const { FormatChangedFilesUseCase } = require("./application/useCases/FormatChangedFilesUseCase");
+const { FormatCurrentFileUseCase } = require("./application/useCases/FormatCurrentFileUseCase");
+const { FormatSavedDocumentUseCase } = require("./application/useCases/FormatSavedDocumentUseCase");
+const { FormattingWorkflow } = require("./application/services/FormattingWorkflow");
+const { MixedHtmlDetector } = require("./domain/mixedHtml/MixedHtmlDetector");
+const { OperatorSpacingNormalizer } = require("./domain/operatorSpacing/OperatorSpacingNormalizer");
+const { ConfigService } = require("./infrastructure/config/ConfigService");
+const { GitChangeProvider } = require("./infrastructure/git/GitChangeProvider");
+const { Logger } = require("./infrastructure/logging/Logger");
+const { Notifier } = require("./infrastructure/notification/Notifier");
+const { VscodeDocumentService } = require("./infrastructure/vscode/VscodeDocumentService");
+const { VscodeOperatorSpacingFixer } = require("./infrastructure/vscode/VscodeOperatorSpacingFixer");
+const { VscodePhpFormatter } = require("./infrastructure/vscode/VscodePhpFormatter");
 
 /**
  * Creates and wires the extension services without introducing a DI framework.

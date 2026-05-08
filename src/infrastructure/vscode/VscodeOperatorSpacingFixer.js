@@ -1,5 +1,8 @@
 const vscode = require("vscode");
-const { getLineStarts, getTargetRanges } = require("../domain/OperatorSpacingNormalizer");
+const {
+  getLineStarts,
+  getTargetRanges,
+} = require("../../domain/operatorSpacing/OperatorSpacingNormalizer");
 
 /**
  * Applies domain-generated operator spacing edits through the VS Code API.
