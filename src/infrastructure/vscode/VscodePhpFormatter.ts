@@ -1,10 +1,24 @@
-const vscode = require("vscode");
+import * as vscode from "vscode";
+import { ChangedRange } from "../../domain/types/formatting";
+import {
+  DocumentServiceLike,
+  LoggerLike,
+  PhpFormatterLike,
+} from "../../domain/types/services";
+
+type VscodePhpFormatterDependencies = {
+  documentService: DocumentServiceLike;
+  logger: LoggerLike;
+};
 
 /**
  * Calls VS Code formatter providers and applies their edits.
  */
-class VscodePhpFormatter {
-  constructor({ documentService, logger }) {
+export class VscodePhpFormatter implements PhpFormatterLike {
+  private readonly documentService: DocumentServiceLike;
+  private readonly logger: LoggerLike;
+
+  constructor({ documentService, logger }: VscodePhpFormatterDependencies) {
     this.documentService = documentService;
     this.logger = logger;
   }
@@ -12,12 +26,12 @@ class VscodePhpFormatter {
   /**
    * Runs the active VS Code document formatter for an entire PHP file.
    */
-  async formatWholeDocument(document) {
+  async formatWholeDocument(document: vscode.TextDocument): Promise<boolean> {
     if (!this.documentService.isPhpFileDocument(document)) {
       return false;
     }
 
-    const edits = await vscode.commands.executeCommand(
+    const edits = await vscode.commands.executeCommand<vscode.TextEdit[]>(
       "vscode.executeFormatDocumentProvider",
       document.uri,
       this.getFormattingOptions(document)
@@ -30,7 +44,10 @@ class VscodePhpFormatter {
   /**
    * Runs the active VS Code range formatter for changed line ranges.
    */
-  async formatChangedRanges(document, ranges) {
+  async formatChangedRanges(
+    document: vscode.TextDocument,
+    ranges: ChangedRange[]
+  ): Promise<boolean> {
     if (!this.documentService.isPhpFileDocument(document) || ranges.length === 0) {
       return false;
     }
@@ -53,7 +70,7 @@ class VscodePhpFormatter {
           activeDocument.uri.fsPath
       );
 
-      const edits = await vscode.commands.executeCommand(
+      const edits = await vscode.commands.executeCommand<vscode.TextEdit[]>(
         "vscode.executeFormatRangeProvider",
         activeDocument.uri,
         range,
@@ -78,7 +95,7 @@ class VscodePhpFormatter {
   /**
    * Converts a 1-based changed-line range into a VS Code range.
    */
-  createRangeFromLineInfo(document, rangeInfo) {
+  createRangeFromLineInfo(document: vscode.TextDocument, rangeInfo: ChangedRange): vscode.Range | null {
     const startLineIndex = Math.max(rangeInfo.startLine - 1, 0);
     const endLineIndex = Math.min(rangeInfo.endLine - 1, document.lineCount - 1);
 
@@ -96,7 +113,10 @@ class VscodePhpFormatter {
   /**
    * Applies formatter edits to a document and saves it.
    */
-  async applyEditsAndSave(document, edits) {
+  async applyEditsAndSave(
+    document: vscode.TextDocument,
+    edits: vscode.TextEdit[] | undefined
+  ): Promise<boolean> {
     const applied = await this.applyEdits(document.uri, edits);
     if (!applied) {
       return false;
@@ -110,7 +130,7 @@ class VscodePhpFormatter {
   /**
    * Applies raw VS Code text edits to a URI.
    */
-  async applyEdits(uri, edits) {
+  async applyEdits(uri: vscode.Uri, edits: vscode.TextEdit[] | undefined): Promise<boolean> {
     if (!Array.isArray(edits) || edits.length === 0) {
       return false;
     }
@@ -123,7 +143,7 @@ class VscodePhpFormatter {
   /**
    * Reads editor formatting options for the target document.
    */
-  getFormattingOptions(document) {
+  getFormattingOptions(document: vscode.TextDocument): vscode.FormattingOptions {
     const editorConfig = vscode.workspace.getConfiguration("editor", document.uri);
     const tabSize = editorConfig.get("tabSize");
 
@@ -133,7 +153,3 @@ class VscodePhpFormatter {
     };
   }
 }
-
-module.exports = {
-  VscodePhpFormatter,
-};

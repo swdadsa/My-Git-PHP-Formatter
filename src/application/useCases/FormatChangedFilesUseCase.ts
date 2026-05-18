@@ -1,10 +1,26 @@
-const vscode = require("vscode");
+import * as vscode from "vscode";
+import { FormatChangedFilesResult } from "../../domain/types/formatting";
+import {
+  FormattingWorkflowLike,
+  GitChangeProviderLike,
+  NotifierLike,
+} from "../../domain/types/services";
+
+type FormatChangedFilesUseCaseDependencies = {
+  gitChangeProvider: GitChangeProviderLike;
+  notifier: NotifierLike;
+  workflow: FormattingWorkflowLike;
+};
 
 /**
  * Formats all changed PHP files in the current workspace.
  */
-class FormatChangedFilesUseCase {
-  constructor({ gitChangeProvider, notifier, workflow }) {
+export class FormatChangedFilesUseCase {
+  private readonly gitChangeProvider: GitChangeProviderLike;
+  private readonly notifier: NotifierLike;
+  private readonly workflow: FormattingWorkflowLike;
+
+  constructor({ gitChangeProvider, notifier, workflow }: FormatChangedFilesUseCaseDependencies) {
     this.gitChangeProvider = gitChangeProvider;
     this.notifier = notifier;
     this.workflow = workflow;
@@ -13,7 +29,7 @@ class FormatChangedFilesUseCase {
   /**
    * Executes the changed-files formatting command.
    */
-  async execute() {
+  async execute(): Promise<void> {
     const workspaceFolders = vscode.workspace.workspaceFolders || [];
     if (workspaceFolders.length === 0) {
       throw new Error("Open a workspace folder before formatting changed files.");
@@ -33,7 +49,10 @@ class FormatChangedFilesUseCase {
 /**
  * Builds the user-facing summary for the changed-files command.
  */
-function buildChangedFilesMessage({ formattedCount, skippedCount }) {
+export function buildChangedFilesMessage({
+  formattedCount,
+  skippedCount,
+}: FormatChangedFilesResult): string {
   if (formattedCount > 0 && skippedCount > 0) {
     return `Formatted ${formattedCount} changed PHP file(s) and ` +
       `skipped ${skippedCount} mixed PHP/HTML file(s).`;
@@ -49,8 +68,3 @@ function buildChangedFilesMessage({ formattedCount, skippedCount }) {
 
   return "No formatting changes were needed.";
 }
-
-module.exports = {
-  FormatChangedFilesUseCase,
-  buildChangedFilesMessage,
-};

@@ -1,8 +1,32 @@
+import {
+  DocumentServiceLike,
+  FormattingWorkflowLike,
+  GitChangeProviderLike,
+  NotifierLike,
+} from "../../domain/types/services";
+
+type FormatCurrentFileUseCaseDependencies = {
+  documentService: DocumentServiceLike;
+  gitChangeProvider: GitChangeProviderLike;
+  notifier: NotifierLike;
+  workflow: FormattingWorkflowLike;
+};
+
 /**
  * Formats the active PHP document when it has git changes.
  */
-class FormatCurrentFileUseCase {
-  constructor({ documentService, gitChangeProvider, notifier, workflow }) {
+export class FormatCurrentFileUseCase {
+  private readonly documentService: DocumentServiceLike;
+  private readonly gitChangeProvider: GitChangeProviderLike;
+  private readonly notifier: NotifierLike;
+  private readonly workflow: FormattingWorkflowLike;
+
+  constructor({
+    documentService,
+    gitChangeProvider,
+    notifier,
+    workflow,
+  }: FormatCurrentFileUseCaseDependencies) {
     this.documentService = documentService;
     this.gitChangeProvider = gitChangeProvider;
     this.notifier = notifier;
@@ -12,7 +36,7 @@ class FormatCurrentFileUseCase {
   /**
    * Executes the current-file formatting command.
    */
-  async execute() {
+  async execute(): Promise<void> {
     const document = this.documentService.getActivePhpDocument();
     if (!document) {
       throw new Error("Open a PHP file before running this command.");
@@ -40,7 +64,3 @@ class FormatCurrentFileUseCase {
     );
   }
 }
-
-module.exports = {
-  FormatCurrentFileUseCase,
-};

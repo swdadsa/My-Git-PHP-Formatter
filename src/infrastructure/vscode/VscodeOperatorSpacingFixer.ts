@@ -1,14 +1,39 @@
-const vscode = require("vscode");
-const {
+import * as vscode from "vscode";
+import {
   getLineStarts,
   getTargetRanges,
-} = require("../../domain/operatorSpacing/OperatorSpacingNormalizer");
+} from "../../domain/operatorSpacing/OperatorSpacingNormalizer";
+import { FormatTargetInfo } from "../../domain/types/formatting";
+import {
+  ConfigReader,
+  DocumentServiceLike,
+  LoggerLike,
+  OperatorSpacingFixerLike,
+  OperatorSpacingNormalizerLike,
+} from "../../domain/types/services";
+
+type VscodeOperatorSpacingFixerDependencies = {
+  config: ConfigReader;
+  documentService: DocumentServiceLike;
+  logger: LoggerLike;
+  normalizer: OperatorSpacingNormalizerLike;
+};
 
 /**
  * Applies domain-generated operator spacing edits through the VS Code API.
  */
-class VscodeOperatorSpacingFixer {
-  constructor({ config, documentService, logger, normalizer }) {
+export class VscodeOperatorSpacingFixer implements OperatorSpacingFixerLike {
+  private readonly config: ConfigReader;
+  private readonly documentService: DocumentServiceLike;
+  private readonly logger: LoggerLike;
+  private readonly normalizer: OperatorSpacingNormalizerLike;
+
+  constructor({
+    config,
+    documentService,
+    logger,
+    normalizer,
+  }: VscodeOperatorSpacingFixerDependencies) {
     this.config = config;
     this.documentService = documentService;
     this.logger = logger;
@@ -18,7 +43,7 @@ class VscodeOperatorSpacingFixer {
   /**
    * Normalizes whitespace around configured PHP operators after formatter edits.
    */
-  async normalize(document, info) {
+  async normalize(document: vscode.TextDocument, info: FormatTargetInfo): Promise<boolean> {
     if (!this.config.shouldNormalizeOperatorSpacing() ||
       !this.documentService.isPhpFileDocument(document)) {
       return false;
@@ -62,7 +87,7 @@ class VscodeOperatorSpacingFixer {
 /**
  * Converts an absolute text offset into a VS Code position.
  */
-function offsetToPosition(offset, lineStarts) {
+export function offsetToPosition(offset: number, lineStarts: number[]): vscode.Position {
   let low = 0;
   let high = lineStarts.length - 1;
 
@@ -79,8 +104,4 @@ function offsetToPosition(offset, lineStarts) {
   return new vscode.Position(line, offset - lineStarts[line]);
 }
 
-module.exports = {
-  VscodeOperatorSpacingFixer,
-  getLineStarts,
-  offsetToPosition,
-};
+export { getLineStarts };

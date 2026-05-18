@@ -8,18 +8,39 @@ const LINE_COMMENT_STATE = "lineComment";
 const BLOCK_COMMENT_STATE = "blockComment";
 const HEREDOC_STATE = "heredoc";
 
+type PhpScannerState =
+  | typeof CODE_STATE
+  | typeof SINGLE_QUOTE_STATE
+  | typeof DOUBLE_QUOTE_STATE
+  | typeof LINE_COMMENT_STATE
+  | typeof BLOCK_COMMENT_STATE
+  | typeof HEREDOC_STATE;
+
+type PhpScannerResult = {
+  state: PhpScannerState;
+  heredocTerminator: string | null;
+  nextIndex: number;
+};
+
+type HeredocStart = {
+  terminator: string;
+  nextIndex: number;
+};
+
 /**
  * Detects PHP files where HTML markup is likely mixed into the document body.
  */
-class MixedHtmlDetector {
-  constructor({ htmlTagThreshold = DEFAULT_HTML_TAG_THRESHOLD } = {}) {
+export class MixedHtmlDetector {
+  private readonly htmlTagThreshold: number;
+
+  constructor({ htmlTagThreshold = DEFAULT_HTML_TAG_THRESHOLD }: { htmlTagThreshold?: number } = {}) {
     this.htmlTagThreshold = htmlTagThreshold;
   }
 
   /**
    * Returns whether the text appears to contain substantial non-PHP HTML markup.
    */
-  isLikelyMixedHtmlText(text) {
+  isLikelyMixedHtmlText(text: string): boolean {
     const outsidePhpText = extractOutsidePhpText(text);
     const tagMatches = outsidePhpText.match(HTML_TAG_PATTERN) || [];
 
@@ -30,7 +51,7 @@ class MixedHtmlDetector {
 /**
  * Extracts only the text outside PHP blocks, ignoring PHP strings and comments.
  */
-function extractOutsidePhpText(text) {
+export function extractOutsidePhpText(text: string): string {
   let cursor = 0;
   let outsidePhpText = "";
 
@@ -55,9 +76,9 @@ function extractOutsidePhpText(text) {
 /**
  * Finds the first real PHP close tag after an opening tag.
  */
-function findPhpBlockEnd(text, startOffset) {
-  let state = CODE_STATE;
-  let heredocTerminator = null;
+function findPhpBlockEnd(text: string, startOffset: number): number {
+  let state: PhpScannerState = CODE_STATE;
+  let heredocTerminator: string | null = null;
 
   for (let index = startOffset; index < text.length; index += 1) {
     const stateResult = advancePhpState(text, index, state, heredocTerminator);
@@ -80,7 +101,12 @@ function findPhpBlockEnd(text, startOffset) {
 /**
  * Moves the PHP scanner through code, strings, comments, and heredoc blocks.
  */
-function advancePhpState(text, index, state, heredocTerminator) {
+function advancePhpState(
+  text: string,
+  index: number,
+  state: PhpScannerState,
+  heredocTerminator: string | null
+): PhpScannerResult {
   switch (state) {
     case SINGLE_QUOTE_STATE:
       return advanceQuotedString(text, index, "'", SINGLE_QUOTE_STATE);
@@ -104,7 +130,11 @@ function advancePhpState(text, index, state, heredocTerminator) {
 /**
  * Enters a PHP string/comment/heredoc state when code scanning reaches one.
  */
-function enterPhpIgnoredState(text, index, heredocTerminator) {
+function enterPhpIgnoredState(
+  text: string,
+  index: number,
+  heredocTerminator: string | null
+): PhpScannerResult {
   if (text[index] === "'") {
     return { state: SINGLE_QUOTE_STATE, heredocTerminator, nextIndex: index };
   }
@@ -136,7 +166,12 @@ function enterPhpIgnoredState(text, index, heredocTerminator) {
 /**
  * Leaves a quoted string when an unescaped closing quote appears.
  */
-function advanceQuotedString(text, index, quote, state) {
+function advanceQuotedString(
+  text: string,
+  index: number,
+  quote: string,
+  state: PhpScannerState
+): PhpScannerResult {
   if (text[index] !== quote) {
     return { state, heredocTerminator: null, nextIndex: index };
   }
@@ -149,7 +184,15 @@ function advanceQuotedString(text, index, quote, state) {
 /**
  * Leaves heredoc/nowdoc mode when the terminator appears at the start of a line.
  */
-function advanceHeredoc(text, index, heredocTerminator) {
+function advanceHeredoc(
+  text: string,
+  index: number,
+  heredocTerminator: string | null
+): PhpScannerResult {
+  if (!heredocTerminator) {
+    return { state: CODE_STATE, heredocTerminator: null, nextIndex: index };
+  }
+
   if (!isLineStart(text, index) || !text.startsWith(heredocTerminator, index)) {
     return { state: HEREDOC_STATE, heredocTerminator, nextIndex: index };
   }
@@ -165,7 +208,7 @@ function advanceHeredoc(text, index, heredocTerminator) {
 /**
  * Reads a heredoc/nowdoc opening token and returns its terminator.
  */
-function readHeredocStart(text, index) {
+function readHeredocStart(text: string, index: number): HeredocStart | null {
   if (!text.startsWith("<<<", index)) {
     return null;
   }
@@ -186,7 +229,7 @@ function readHeredocStart(text, index) {
 /**
  * Skips past `<?php`, `<?=`, or short open tags.
  */
-function skipPhpOpenTag(text, tagStart) {
+function skipPhpOpenTag(text: string, tagStart: number): number {
   if (text.startsWith("<?php", tagStart)) {
     return tagStart + 5;
   }
@@ -201,7 +244,7 @@ function skipPhpOpenTag(text, tagStart) {
 /**
  * Returns the offset of the line break after index.
  */
-function findLineEnd(text, index) {
+function findLineEnd(text: string, index: number): number {
   const lineEnd = text.indexOf("\n", index);
   return lineEnd === -1 ? text.length : lineEnd;
 }
@@ -209,22 +252,17 @@ function findLineEnd(text, index) {
 /**
  * Returns whether an offset starts a new line.
  */
-function isLineStart(text, index) {
+function isLineStart(text: string, index: number): boolean {
   return index === 0 || text[index - 1] === "\n";
 }
 
 /**
  * Returns whether a quote is escaped by an odd number of backslashes.
  */
-function isEscaped(text, index) {
+function isEscaped(text: string, index: number): boolean {
   let slashCount = 0;
   for (let cursor = index - 1; cursor >= 0 && text[cursor] === "\\"; cursor -= 1) {
     slashCount += 1;
   }
   return slashCount % 2 === 1;
 }
-
-module.exports = {
-  extractOutsidePhpText,
-  MixedHtmlDetector,
-};

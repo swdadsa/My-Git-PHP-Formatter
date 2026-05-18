@@ -4,7 +4,7 @@
   "description": "Format changed PHP lines from git diff and optionally run on save.",
   "displayName": "My Git PHP Formatter",
   "publisher": "finn",
-  "main": "./extension.js",
+  "main": "./dist/extension.js",
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -18,8 +18,10 @@
     "onLanguage:php"
   ],
   "scripts": {
-    "package:vsix": "vsce package --allow-missing-repository",
-    "package:vsix:pre-release": "vsce package --pre-release --allow-missing-repository",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package:vsix": "npm run compile && vsce package --allow-missing-repository",
+    "package:vsix:pre-release": "npm run compile && vsce package --pre-release --allow-missing-repository",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "contributes": {
@@ -75,8 +77,11 @@
     "cheerio": "1.0.0-rc.12"
   },
   "devDependencies": {
+    "@types/node": "^20.19.41",
+    "@types/vscode": "^1.85.0",
     "@vscode/vsce": "2.24.0",
     "intelephense": "^1.16.5",
+    "typescript": "^5.9.3",
     "vscode-jsonrpc": "^8.2.1"
   }
 }

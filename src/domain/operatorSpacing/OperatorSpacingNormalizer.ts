@@ -1,3 +1,11 @@
+import * as vscode from "vscode";
+import {
+  ChangedRange,
+  FormatTargetInfo,
+  OffsetRange,
+  OperatorSpacingEdit,
+} from "../types/formatting";
+
 const CODE_STATE = "code";
 const DOUBLE_QUOTE_STATE = "doubleQuote";
 const HEREDOC_STATE = "heredoc";
@@ -19,27 +27,48 @@ const DEFAULT_OPERATORS = [
   "=",
   "<",
   ">",
-];
+] as const;
+
+type ScannerState =
+  | typeof CODE_STATE
+  | typeof DOUBLE_QUOTE_STATE
+  | typeof HEREDOC_STATE
+  | typeof LINE_COMMENT_STATE
+  | typeof BLOCK_COMMENT_STATE
+  | typeof SINGLE_QUOTE_STATE;
+
+type ScannerResult = {
+  state: ScannerState;
+  heredocTerminator: string | null;
+  nextIndex: number;
+};
+
+type HeredocStart = {
+  terminator: string;
+  nextIndex: number;
+};
 
 /**
  * Finds safe operator spacing edits inside PHP code ranges.
  */
-class OperatorSpacingNormalizer {
-  constructor({ operators = DEFAULT_OPERATORS } = {}) {
+export class OperatorSpacingNormalizer {
+  private readonly operators: string[];
+
+  constructor({ operators = DEFAULT_OPERATORS }: { operators?: readonly string[] } = {}) {
     this.operators = [...operators].sort((left, right) => right.length - left.length);
   }
 
   /**
    * Builds offset-based edits without touching strings, comments, or heredoc blocks.
    */
-  buildEdits(text, ranges) {
+  buildEdits(text: string, ranges: ChangedRange[]): OperatorSpacingEdit[] {
     const lineStarts = getLineStarts(text);
     const targetOffsets = rangesToOffsets(ranges, lineStarts, text.length);
     const hasPhpTags = text.includes("<?");
     let inPhp = !hasPhpTags;
-    let state = CODE_STATE;
-    let heredocTerminator = null;
-    const edits = [];
+    let state: ScannerState = CODE_STATE;
+    let heredocTerminator: string | null = null;
+    const edits: OperatorSpacingEdit[] = [];
 
     for (let index = 0; index < text.length; index += 1) {
       if (!inPhp) {
@@ -86,7 +115,10 @@ class OperatorSpacingNormalizer {
 /**
  * Returns changed ranges for modified files, or the whole document for new files.
  */
-function getTargetRanges(document, info) {
+export function getTargetRanges(
+  document: vscode.TextDocument,
+  info: FormatTargetInfo
+): ChangedRange[] {
   if (!info.isNew) {
     return info.ranges;
   }
@@ -102,7 +134,12 @@ function getTargetRanges(document, info) {
 /**
  * Moves the scanner through strings, comments, and heredoc blocks.
  */
-function advanceScannerState(text, index, state, heredocTerminator) {
+function advanceScannerState(
+  text: string,
+  index: number,
+  state: ScannerState,
+  heredocTerminator: string | null
+): ScannerResult {
   switch (state) {
     case SINGLE_QUOTE_STATE:
       return advanceSingleQuotedString(text, index);
@@ -126,7 +163,11 @@ function advanceScannerState(text, index, state, heredocTerminator) {
 /**
  * Enters a string/comment/heredoc state when code scanning reaches one.
  */
-function enterIgnoredState(text, index, heredocTerminator) {
+function enterIgnoredState(
+  text: string,
+  index: number,
+  heredocTerminator: string | null
+): ScannerResult {
   if (text[index] === "'") {
     return { state: SINGLE_QUOTE_STATE, heredocTerminator, nextIndex: index };
   }
@@ -158,7 +199,7 @@ function enterIgnoredState(text, index, heredocTerminator) {
 /**
  * Skips through a single quoted PHP string.
  */
-function advanceSingleQuotedString(text, index) {
+function advanceSingleQuotedString(text: string, index: number): ScannerResult {
   if (text[index] !== "'") {
     return { state: SINGLE_QUOTE_STATE, heredocTerminator: null, nextIndex: index };
   }
@@ -171,7 +212,7 @@ function advanceSingleQuotedString(text, index) {
 /**
  * Skips through a double quoted PHP string.
  */
-function advanceDoubleQuotedString(text, index) {
+function advanceDoubleQuotedString(text: string, index: number): ScannerResult {
   if (text[index] !== "\"") {
     return { state: DOUBLE_QUOTE_STATE, heredocTerminator: null, nextIndex: index };
   }
@@ -184,7 +225,15 @@ function advanceDoubleQuotedString(text, index) {
 /**
  * Leaves heredoc/nowdoc mode when the terminator appears at the start of a line.
  */
-function advanceHeredoc(text, index, heredocTerminator) {
+function advanceHeredoc(
+  text: string,
+  index: number,
+  heredocTerminator: string | null
+): ScannerResult {
+  if (!heredocTerminator) {
+    return { state: CODE_STATE, heredocTerminator: null, nextIndex: index };
+  }
+
   if (!isLineStart(text, index) || !text.startsWith(heredocTerminator, index)) {
     return { state: HEREDOC_STATE, heredocTerminator, nextIndex: index };
   }
@@ -200,7 +249,7 @@ function advanceHeredoc(text, index, heredocTerminator) {
 /**
  * Reads a heredoc/nowdoc opening token and returns its terminator.
  */
-function readHeredocStart(text, index) {
+function readHeredocStart(text: string, index: number): HeredocStart | null {
   if (!text.startsWith("<<<", index)) {
     return null;
   }
@@ -221,7 +270,7 @@ function readHeredocStart(text, index) {
 /**
  * Returns the configured operator that starts at an offset.
  */
-function findOperatorAt(text, offset, operators) {
+function findOperatorAt(text: string, offset: number, operators: string[]): string | undefined {
   return operators.find((operator) => (
     text.startsWith(operator, offset) && isStandaloneOperator(text, offset, operator)
   ));
@@ -230,7 +279,7 @@ function findOperatorAt(text, offset, operators) {
 /**
  * Avoids treating pieces of longer operators as standalone operators.
  */
-function isStandaloneOperator(text, offset, operator) {
+function isStandaloneOperator(text: string, offset: number, operator: string): boolean {
   const before = text[offset - 1] || "";
   const after = text[offset + operator.length] || "";
 
@@ -257,7 +306,13 @@ function isStandaloneOperator(text, offset, operator) {
 /**
  * Creates a replacement edit for one operator when it is inside a changed range.
  */
-function createOperatorEdit(text, operatorOffset, operator, targetOffsets, lineStarts) {
+function createOperatorEdit(
+  text: string,
+  operatorOffset: number,
+  operator: string,
+  targetOffsets: OffsetRange[],
+  lineStarts: number[]
+): OperatorSpacingEdit | null {
   if (!isOffsetInRanges(operatorOffset, targetOffsets)) {
     return null;
   }
@@ -280,7 +335,11 @@ function createOperatorEdit(text, operatorOffset, operator, targetOffsets, lineS
 /**
  * Converts 1-based line ranges to offset ranges.
  */
-function rangesToOffsets(ranges, lineStarts, textLength) {
+function rangesToOffsets(
+  ranges: ChangedRange[],
+  lineStarts: number[],
+  textLength: number
+): OffsetRange[] {
   return ranges.map((range) => {
     const startLineIndex = Math.max(range.startLine - 1, 0);
     const endLineIndex = Math.max(range.endLine - 1, startLineIndex);
@@ -294,7 +353,7 @@ function rangesToOffsets(ranges, lineStarts, textLength) {
 /**
  * Returns all line-start offsets in a document.
  */
-function getLineStarts(text) {
+export function getLineStarts(text: string): number[] {
   const starts = [0];
   for (let index = 0; index < text.length; index += 1) {
     if (text[index] === "\n") {
@@ -307,7 +366,7 @@ function getLineStarts(text) {
 /**
  * Returns the offset at the end of a 0-based line.
  */
-function getLineEndOffset(lineStarts, lineIndex, textLength) {
+function getLineEndOffset(lineStarts: number[], lineIndex: number, textLength: number): number {
   const nextLineStart = lineStarts[lineIndex + 1];
   if (nextLineStart === undefined) {
     return textLength;
@@ -319,14 +378,14 @@ function getLineEndOffset(lineStarts, lineIndex, textLength) {
 /**
  * Returns whether an offset is inside any target range.
  */
-function isOffsetInRanges(offset, ranges) {
+function isOffsetInRanges(offset: number, ranges: OffsetRange[]): boolean {
   return ranges.some((range) => offset >= range.startOffset && offset <= range.endOffset);
 }
 
 /**
  * Finds the first horizontal whitespace character before a token.
  */
-function findWhitespaceStart(text, offset) {
+function findWhitespaceStart(text: string, offset: number): number {
   let start = offset;
   while (start > 0 && isHorizontalWhitespace(text[start - 1])) {
     start -= 1;
@@ -337,7 +396,7 @@ function findWhitespaceStart(text, offset) {
 /**
  * Finds the first non-horizontal-whitespace character after a token.
  */
-function findWhitespaceEnd(text, offset) {
+function findWhitespaceEnd(text: string, offset: number): number {
   let end = offset;
   while (end < text.length && isHorizontalWhitespace(text[end])) {
     end += 1;
@@ -348,7 +407,7 @@ function findWhitespaceEnd(text, offset) {
 /**
  * Skips past `<?php`, `<?=`, or short open tags.
  */
-function skipPhpOpenTag(text, tagStart) {
+function skipPhpOpenTag(text: string, tagStart: number): number {
   if (text.startsWith("<?php", tagStart)) {
     return tagStart + 4;
   }
@@ -363,7 +422,7 @@ function skipPhpOpenTag(text, tagStart) {
 /**
  * Returns the offset of the line break after index.
  */
-function findLineEnd(text, index) {
+function findLineEnd(text: string, index: number): number {
   const lineEnd = text.indexOf("\n", index);
   return lineEnd === -1 ? text.length : lineEnd;
 }
@@ -371,14 +430,14 @@ function findLineEnd(text, index) {
 /**
  * Returns whether an offset starts a new line.
  */
-function isLineStart(text, index) {
+function isLineStart(text: string, index: number): boolean {
   return index === 0 || text[index - 1] === "\n";
 }
 
 /**
  * Returns whether a quote is escaped by an odd number of backslashes.
  */
-function isEscaped(text, index) {
+function isEscaped(text: string, index: number): boolean {
   let slashCount = 0;
   for (let cursor = index - 1; cursor >= 0 && text[cursor] === "\\"; cursor -= 1) {
     slashCount += 1;
@@ -389,12 +448,6 @@ function isEscaped(text, index) {
 /**
  * Returns whether the character is a space or tab.
  */
-function isHorizontalWhitespace(character) {
+function isHorizontalWhitespace(character: string): boolean {
   return character === " " || character === "\t";
 }
-
-module.exports = {
-  OperatorSpacingNormalizer,
-  getLineStarts,
-  getTargetRanges,
-};

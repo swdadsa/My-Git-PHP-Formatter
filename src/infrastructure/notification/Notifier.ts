@@ -1,17 +1,20 @@
-const vscode = require("vscode");
+import * as vscode from "vscode";
+import { ConfigReader, NotifierLike } from "../../domain/types/services";
 
 /**
  * Shows user-facing VS Code notifications while respecting extension settings.
  */
-class Notifier {
-  constructor(config) {
+export class Notifier implements NotifierLike {
+  private readonly config: ConfigReader;
+
+  constructor(config: ConfigReader) {
     this.config = config;
   }
 
   /**
    * Shows an informational VS Code notification.
    */
-  info(message) {
+  info(message: string): void {
     if (this.config.shouldShowNotifications()) {
       void vscode.window.showInformationMessage(message);
     }
@@ -20,7 +23,7 @@ class Notifier {
   /**
    * Shows a warning VS Code notification.
    */
-  warning(message) {
+  warning(message: string): void {
     if (this.config.shouldShowNotifications()) {
       void vscode.window.showWarningMessage(message);
     }
@@ -29,13 +32,9 @@ class Notifier {
   /**
    * Shows an error VS Code notification.
    */
-  error(message) {
+  error(message: string): void {
     if (this.config.shouldShowNotifications()) {
       void vscode.window.showErrorMessage(message);
     }
   }
 }
-
-module.exports = {
-  Notifier,
-};

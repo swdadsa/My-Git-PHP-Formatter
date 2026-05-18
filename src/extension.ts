@@ -1,11 +1,12 @@
-const { createExtensionServices } = require("./src/container");
-const { registerCommands } = require("./src/presentation/commands");
-const { registerFormatOnSave } = require("./src/presentation/saveHandler");
+import * as vscode from "vscode";
+import { createExtensionServices } from "./container";
+import { registerCommands } from "./presentation/commands";
+import { registerFormatOnSave } from "./presentation/saveHandler";
 
 /**
  * Activates the extension and wires together shared services and VS Code hooks.
  */
-function activate(context) {
+export function activate(context: vscode.ExtensionContext): void {
   const services = createExtensionServices();
 
   context.subscriptions.push(services.output);
@@ -16,9 +17,4 @@ function activate(context) {
 /**
  * Placeholder for future cleanup when the extension is deactivated.
  */
-function deactivate() {}
-
-module.exports = {
-  activate,
-  deactivate,
-};
+export function deactivate(): void {}

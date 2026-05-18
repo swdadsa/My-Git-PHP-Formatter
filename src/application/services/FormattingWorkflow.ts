@@ -1,8 +1,40 @@
+import * as vscode from "vscode";
+import {
+  ChangedPhpFile,
+  FormatChangedFilesResult,
+  FormatDocumentResult,
+  FormatTargetInfo,
+} from "../../domain/types/formatting";
+import {
+  DocumentFormatPolicyLike,
+  DocumentServiceLike,
+  FormattingWorkflowLike,
+  OperatorSpacingFixerLike,
+  PhpFormatterLike,
+} from "../../domain/types/services";
+
+type FormattingWorkflowDependencies = {
+  documentPolicy: DocumentFormatPolicyLike;
+  documentService: DocumentServiceLike;
+  formatter: PhpFormatterLike;
+  operatorSpacingFixer: OperatorSpacingFixerLike;
+};
+
 /**
  * Coordinates formatter providers, document policies, and post-format fixers.
  */
-class FormattingWorkflow {
-  constructor({ documentPolicy, documentService, formatter, operatorSpacingFixer }) {
+export class FormattingWorkflow implements FormattingWorkflowLike {
+  private readonly documentPolicy: DocumentFormatPolicyLike;
+  private readonly documentService: DocumentServiceLike;
+  private readonly formatter: PhpFormatterLike;
+  private readonly operatorSpacingFixer: OperatorSpacingFixerLike;
+
+  constructor({
+    documentPolicy,
+    documentService,
+    formatter,
+    operatorSpacingFixer,
+  }: FormattingWorkflowDependencies) {
     this.documentPolicy = documentPolicy;
     this.documentService = documentService;
     this.formatter = formatter;
@@ -12,8 +44,8 @@ class FormattingWorkflow {
   /**
    * Formats each changed file entry and tracks how many files were skipped.
    */
-  async formatChangedFileEntries(changedFiles) {
-    const result = {
+  async formatChangedFileEntries(changedFiles: ChangedPhpFile[]): Promise<FormatChangedFilesResult> {
+    const result: FormatChangedFilesResult = {
       formattedCount: 0,
       skippedCount: 0,
     };
@@ -38,7 +70,10 @@ class FormattingWorkflow {
   /**
    * Formats one document if it is not skipped by policy.
    */
-  async formatDocument(document, info) {
+  async formatDocument(
+    document: vscode.TextDocument,
+    info: FormatTargetInfo
+  ): Promise<FormatDocumentResult> {
     if (this.documentPolicy.shouldSkip(document)) {
       return {
         changed: false,
@@ -55,7 +90,10 @@ class FormattingWorkflow {
   /**
    * Runs the VS Code formatter and then applies optional project-specific fixers.
    */
-  async formatDocumentFromChangeInfo(document, info) {
+  async formatDocumentFromChangeInfo(
+    document: vscode.TextDocument,
+    info: FormatTargetInfo
+  ): Promise<boolean> {
     const formatted = info.isNew
       ? await this.formatter.formatWholeDocument(document)
       : await this.formatter.formatChangedRanges(document, info.ranges);
@@ -64,7 +102,3 @@ class FormattingWorkflow {
     return formatted || fixedOperators;
   }
 }
-
-module.exports = {
-  FormattingWorkflow,
-};

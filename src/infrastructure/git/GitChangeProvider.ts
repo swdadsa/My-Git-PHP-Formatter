@@ -1,7 +1,13 @@
-const path = require("node:path");
-const fs = require("node:fs");
-const { execFile } = require("node:child_process");
-const vscode = require("vscode");
+import { execFile } from "node:child_process";
+import * as fs from "node:fs";
+import * as path from "node:path";
+import * as vscode from "vscode";
+import {
+  ChangedPhpFile,
+  ChangedRange,
+  DocumentChangeInfo,
+} from "../../domain/types/formatting";
+import { GitChangeProviderLike, LoggerLike } from "../../domain/types/services";
 
 const DIFF_RANGE_HEADER = /^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@/;
 const PHP_PATHSPECS = ["--", "*.php", ":(glob)**/*.php"];
@@ -9,17 +15,21 @@ const PHP_PATHSPECS = ["--", "*.php", ":(glob)**/*.php"];
 /**
  * Reads git state and converts diffs into PHP file change information.
  */
-class GitChangeProvider {
-  constructor(logger) {
+export class GitChangeProvider implements GitChangeProviderLike {
+  private readonly logger: LoggerLike;
+
+  constructor(logger: LoggerLike) {
     this.logger = logger;
   }
 
   /**
    * Collects changed PHP files across all open workspace folders.
    */
-  async collectChangedPhpFiles(workspaceFolders) {
-    const results = [];
-    const seenRepos = new Set();
+  async collectChangedPhpFiles(
+    workspaceFolders: readonly vscode.WorkspaceFolder[]
+  ): Promise<ChangedPhpFile[]> {
+    const results: ChangedPhpFile[] = [];
+    const seenRepos = new Set<string>();
 
     for (const folder of workspaceFolders) {
       const repoRoot = await this.findRepoRoot(folder.uri.fsPath);
@@ -32,7 +42,7 @@ class GitChangeProvider {
 
       const tracked = await this.listTrackedPhpChanges(repoRoot);
       const untracked = await this.listUntrackedPhpFiles(repoRoot);
-      const fileMap = new Map();
+      const fileMap = new Map<string, ChangedPhpFile>();
 
       for (const entry of tracked) {
         fileMap.set(entry.relativePath, entry);
@@ -64,7 +74,7 @@ class GitChangeProvider {
   /**
    * Returns the git change state for one document URI.
    */
-  async getDocumentChangeInfo(uri) {
+  async getDocumentChangeInfo(uri: vscode.Uri): Promise<DocumentChangeInfo | null> {
     if (uri.scheme !== "file") {
       return null;
     }
@@ -116,7 +126,7 @@ class GitChangeProvider {
   /**
    * Finds the git repository root that contains a file or folder.
    */
-  async findRepoRoot(startPath) {
+  async findRepoRoot(startPath: string): Promise<string | null> {
     try {
       const stat = fs.statSync(startPath);
       const cwd = stat.isDirectory() ? startPath : path.dirname(startPath);
@@ -130,7 +140,7 @@ class GitChangeProvider {
   /**
    * Lists tracked PHP files that are modified or newly added against HEAD.
    */
-  async listTrackedPhpChanges(repoRoot) {
+  async listTrackedPhpChanges(repoRoot: string): Promise<ChangedPhpFile[]> {
     const hasHead = await this.repositoryHasHead(repoRoot);
     const modifiedFiles = hasHead
       ? await this.listNameOnly(repoRoot, [
@@ -152,7 +162,7 @@ class GitChangeProvider {
           ...getPhpPathspecArgs(),
         ])
       : await this.listNameOnly(repoRoot, ["ls-files", "--cached", ...getPhpPathspecArgs()]);
-    const entries = [];
+    const entries: ChangedPhpFile[] = [];
 
     for (const relativePath of modifiedFiles) {
       entries.push({
@@ -178,7 +188,7 @@ class GitChangeProvider {
   /**
    * Lists untracked PHP files that are not ignored by git.
    */
-  async listUntrackedPhpFiles(repoRoot) {
+  async listUntrackedPhpFiles(repoRoot: string): Promise<string[]> {
     const stdout = await execGit(
       ["ls-files", "--others", "--exclude-standard", ...getPhpPathspecArgs()],
       repoRoot
@@ -193,7 +203,7 @@ class GitChangeProvider {
   /**
    * Parses git diff hunks into changed line ranges for a modified file.
    */
-  async getDiffRanges(repoRoot, relativePath) {
+  async getDiffRanges(repoRoot: string, relativePath: string): Promise<ChangedRange[]> {
     if (!(await this.repositoryHasHead(repoRoot))) {
       return [];
     }
@@ -209,7 +219,7 @@ class GitChangeProvider {
   /**
    * Returns whether the repository has an initial commit.
    */
-  async repositoryHasHead(repoRoot) {
+  async repositoryHasHead(repoRoot: string): Promise<boolean> {
     try {
       await execGit(["rev-parse", "--verify", "HEAD"], repoRoot);
       return true;
@@ -221,7 +231,7 @@ class GitChangeProvider {
   /**
    * Runs a git command that returns one path per line.
    */
-  async listNameOnly(repoRoot, args) {
+  async listNameOnly(repoRoot: string, args: string[]): Promise<string[]> {
     const stdout = await execGit(args, repoRoot);
     return stdout
       .split(/\r?\n/)
@@ -233,7 +243,7 @@ class GitChangeProvider {
 /**
  * Executes a git command and resolves with stdout.
  */
-function execGit(args, cwd) {
+function execGit(args: string[], cwd: string): Promise<string> {
   return new Promise((resolve, reject) => {
     execFile("git", args, { cwd, encoding: "utf8" }, (error, stdout, stderr) => {
       if (error) {
@@ -250,8 +260,8 @@ function execGit(args, cwd) {
 /**
  * Converts unified diff hunk headers to 1-based changed line ranges.
  */
-function parseDiffRanges(diffText) {
-  const ranges = [];
+export function parseDiffRanges(diffText: string): ChangedRange[] {
+  const ranges: ChangedRange[] = [];
 
   for (const line of diffText.split(/\r?\n/)) {
     const match = line.match(DIFF_RANGE_HEADER);
@@ -278,7 +288,7 @@ function parseDiffRanges(diffText) {
 /**
  * Merges overlapping or adjacent changed line ranges.
  */
-function mergeRanges(ranges) {
+export function mergeRanges(ranges: ChangedRange[]): ChangedRange[] {
   if (ranges.length <= 1) {
     return ranges;
   }
@@ -304,12 +314,6 @@ function mergeRanges(ranges) {
 /**
  * Returns git pathspec arguments that match PHP files at any depth.
  */
-function getPhpPathspecArgs() {
+function getPhpPathspecArgs(): string[] {
   return PHP_PATHSPECS;
 }
-
-module.exports = {
-  GitChangeProvider,
-  mergeRanges,
-  parseDiffRanges,
-};
