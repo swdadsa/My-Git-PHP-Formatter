@@ -5,7 +5,6 @@ import {
 } from "../../domain/operatorSpacing/OperatorSpacingNormalizer";
 import { FormatTargetInfo } from "../../domain/types/formatting";
 import {
-  ConfigReader,
   DocumentServiceLike,
   LoggerLike,
   OperatorSpacingFixerLike,
@@ -13,7 +12,6 @@ import {
 } from "../../domain/types/services";
 
 type VscodeOperatorSpacingFixerDependencies = {
-  config: ConfigReader;
   documentService: DocumentServiceLike;
   logger: LoggerLike;
   normalizer: OperatorSpacingNormalizerLike;
@@ -23,18 +21,15 @@ type VscodeOperatorSpacingFixerDependencies = {
  * Applies domain-generated operator spacing edits through the VS Code API.
  */
 export class VscodeOperatorSpacingFixer implements OperatorSpacingFixerLike {
-  private readonly config: ConfigReader;
   private readonly documentService: DocumentServiceLike;
   private readonly logger: LoggerLike;
   private readonly normalizer: OperatorSpacingNormalizerLike;
 
   constructor({
-    config,
     documentService,
     logger,
     normalizer,
   }: VscodeOperatorSpacingFixerDependencies) {
-    this.config = config;
     this.documentService = documentService;
     this.logger = logger;
     this.normalizer = normalizer;
@@ -44,8 +39,7 @@ export class VscodeOperatorSpacingFixer implements OperatorSpacingFixerLike {
    * Normalizes whitespace around configured PHP operators after formatter edits.
    */
   async normalize(document: vscode.TextDocument, info: FormatTargetInfo): Promise<boolean> {
-    if (!this.config.shouldNormalizeOperatorSpacing() ||
-      !this.documentService.isPhpFileDocument(document)) {
+    if (!this.documentService.isPhpFileDocument(document)) {
       return false;
     }
 

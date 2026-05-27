@@ -5,3 +5,13 @@ export const COMMANDS = {
   formatChangedFiles: "myGitPhpFormatter.formatChangedFiles",
   formatCurrentFile: "myGitPhpFormatter.formatCurrentFile",
 } as const;
+
+export const CONFIG_KEYS = {
+  debug: "debug",
+  dGroupCustomRulesEnabled: "dGroupCustomRules.enabled",
+  dGroupOperatorSpacing: "dGroupCustomRules.operatorSpacing",
+  enabled: "enabled",
+  formatOnSave: "formatOnSave",
+  showNotifications: "showNotifications",
+  skipMixedHtmlDocuments: "skipMixedHtmlDocuments",
+} as const;

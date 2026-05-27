@@ -1,4 +1,7 @@
 import * as vscode from "vscode";
+import { DGroupCustomRuleRegistry } from "./application/customRules/dGroup/DGroupCustomRuleRegistry";
+import { OperatorSpacingRule } from "./application/customRules/dGroup/OperatorSpacingRule";
+import { CustomRuleRunner } from "./application/services/CustomRuleRunner";
 import { DocumentFormatPolicy } from "./application/policies/DocumentFormatPolicy";
 import { FormattingWorkflow } from "./application/services/FormattingWorkflow";
 import { FormatChangedFilesUseCase } from "./application/useCases/FormatChangedFilesUseCase";
@@ -50,16 +53,27 @@ export function createExtensionServices(): ExtensionServices {
     logger,
   });
   const operatorSpacingFixer = new VscodeOperatorSpacingFixer({
-    config,
     documentService,
     logger,
     normalizer: operatorSpacingNormalizer,
   });
+  const customRuleRegistry = new DGroupCustomRuleRegistry({
+    config,
+    rules: [
+      new OperatorSpacingRule({
+        config,
+        fixer: operatorSpacingFixer,
+      }),
+    ],
+  });
+  const customRuleRunner = new CustomRuleRunner({
+    registry: customRuleRegistry,
+  });
   const workflow = new FormattingWorkflow({
+    customRuleRunner,
     documentPolicy,
     documentService,
     formatter,
-    operatorSpacingFixer,
   });
   const useCases = {
     formatChangedFiles: new FormatChangedFilesUseCase({

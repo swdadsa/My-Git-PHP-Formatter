@@ -6,39 +6,39 @@ import {
   FormatTargetInfo,
 } from "../../domain/types/formatting";
 import {
+  CustomRuleRunnerLike,
   DocumentFormatPolicyLike,
   DocumentServiceLike,
   FormattingWorkflowLike,
-  OperatorSpacingFixerLike,
   PhpFormatterLike,
 } from "../../domain/types/services";
 
 type FormattingWorkflowDependencies = {
+  customRuleRunner: CustomRuleRunnerLike;
   documentPolicy: DocumentFormatPolicyLike;
   documentService: DocumentServiceLike;
   formatter: PhpFormatterLike;
-  operatorSpacingFixer: OperatorSpacingFixerLike;
 };
 
 /**
  * Coordinates formatter providers, document policies, and post-format fixers.
  */
 export class FormattingWorkflow implements FormattingWorkflowLike {
+  private readonly customRuleRunner: CustomRuleRunnerLike;
   private readonly documentPolicy: DocumentFormatPolicyLike;
   private readonly documentService: DocumentServiceLike;
   private readonly formatter: PhpFormatterLike;
-  private readonly operatorSpacingFixer: OperatorSpacingFixerLike;
 
   constructor({
+    customRuleRunner,
     documentPolicy,
     documentService,
     formatter,
-    operatorSpacingFixer,
   }: FormattingWorkflowDependencies) {
+    this.customRuleRunner = customRuleRunner;
     this.documentPolicy = documentPolicy;
     this.documentService = documentService;
     this.formatter = formatter;
-    this.operatorSpacingFixer = operatorSpacingFixer;
   }
 
   /**
@@ -88,7 +88,7 @@ export class FormattingWorkflow implements FormattingWorkflowLike {
   }
 
   /**
-   * Runs the VS Code formatter and then applies optional project-specific fixers.
+   * Runs the VS Code formatter and then applies enabled custom formatting rules.
    */
   async formatDocumentFromChangeInfo(
     document: vscode.TextDocument,
@@ -97,8 +97,8 @@ export class FormattingWorkflow implements FormattingWorkflowLike {
     const formatted = info.isNew
       ? await this.formatter.formatWholeDocument(document)
       : await this.formatter.formatChangedRanges(document, info.ranges);
-    const fixedOperators = await this.operatorSpacingFixer.normalize(document, info);
+    const customRuleChanged = await this.customRuleRunner.apply(document, info);
 
-    return formatted || fixedOperators;
+    return formatted || customRuleChanged;
   }
 }

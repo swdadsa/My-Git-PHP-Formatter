@@ -53,10 +53,15 @@
           "default": true,
           "description": "Skip formatting PHP files that appear to contain substantial HTML markup."
         },
-        "myGitPhpFormatter.normalizeOperatorSpacing": {
+        "myGitPhpFormatter.dGroupCustomRules.enabled": {
           "type": "boolean",
           "default": false,
-          "description": "Normalize whitespace around common PHP operators such as =, ===, =>, ??, &&, and || to a single space."
+          "description": "Enable D group custom formatting rules."
+        },
+        "myGitPhpFormatter.dGroupCustomRules.operatorSpacing": {
+          "type": "boolean",
+          "default": true,
+          "description": "Normalize whitespace around common PHP operators such as =, ===, =>, ??, &&, and || as part of D group custom rules."
         },
         "myGitPhpFormatter.showNotifications": {
           "type": "boolean",

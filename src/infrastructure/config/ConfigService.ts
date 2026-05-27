@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { CONFIG_SECTION } from "../../constants";
+import { CONFIG_KEYS, CONFIG_SECTION } from "../../constants";
 import { ConfigReader } from "../../domain/types/services";
 
 /**
@@ -17,41 +17,48 @@ export class ConfigService implements ConfigReader {
    * Returns whether the extension should run at all.
    */
   isExtensionEnabled(): boolean {
-    return this.getConfig().get("enabled", true);
+    return this.getConfig().get(CONFIG_KEYS.enabled, true);
   }
 
   /**
    * Returns whether verbose logs should be written to the output channel.
    */
   isDebugEnabled(): boolean {
-    return this.getConfig().get("debug", false);
+    return this.getConfig().get(CONFIG_KEYS.debug, false);
   }
 
   /**
    * Returns whether manual command results should be shown as notifications.
    */
   shouldShowNotifications(): boolean {
-    return this.getConfig().get("showNotifications", true);
+    return this.getConfig().get(CONFIG_KEYS.showNotifications, true);
   }
 
   /**
    * Returns whether mixed PHP/HTML documents should be skipped.
    */
   shouldSkipMixedHtmlDocuments(): boolean {
-    return this.getConfig().get("skipMixedHtmlDocuments", true);
+    return this.getConfig().get(CONFIG_KEYS.skipMixedHtmlDocuments, true);
   }
 
   /**
-   * Returns whether operator spacing should be normalized after formatting.
+   * Returns whether D group custom formatting rules should run.
    */
-  shouldNormalizeOperatorSpacing(): boolean {
-    return this.getConfig().get("normalizeOperatorSpacing", false);
+  shouldRunDGroupCustomRules(): boolean {
+    return this.getConfig().get(CONFIG_KEYS.dGroupCustomRulesEnabled, false);
+  }
+
+  /**
+   * Returns whether the D group operator spacing rule should run.
+   */
+  shouldRunDGroupOperatorSpacingRule(): boolean {
+    return this.getConfig().get(CONFIG_KEYS.dGroupOperatorSpacing, true);
   }
 
   /**
    * Returns whether the save hook should run.
    */
   shouldFormatOnSave(): boolean {
-    return this.isExtensionEnabled() && this.getConfig().get("formatOnSave", false);
+    return this.isExtensionEnabled() && this.getConfig().get(CONFIG_KEYS.formatOnSave, false);
   }
 }

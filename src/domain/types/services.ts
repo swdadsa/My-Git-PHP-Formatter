@@ -12,7 +12,8 @@ export interface ConfigReader {
   isDebugEnabled(): boolean;
   isExtensionEnabled(): boolean;
   shouldFormatOnSave(): boolean;
-  shouldNormalizeOperatorSpacing(): boolean;
+  shouldRunDGroupCustomRules(): boolean;
+  shouldRunDGroupOperatorSpacingRule(): boolean;
   shouldShowNotifications(): boolean;
   shouldSkipMixedHtmlDocuments(): boolean;
 }
@@ -49,6 +50,20 @@ export interface OperatorSpacingFixerLike {
 
 export interface OperatorSpacingNormalizerLike {
   buildEdits(text: string, ranges: ChangedRange[]): OperatorSpacingEdit[];
+}
+
+export interface CustomFormattingRuleLike {
+  readonly id: string;
+  apply(document: vscode.TextDocument, info: FormatTargetInfo): Promise<boolean>;
+  isEnabled(): boolean;
+}
+
+export interface CustomRuleRegistryLike {
+  getEnabledRules(): CustomFormattingRuleLike[];
+}
+
+export interface CustomRuleRunnerLike {
+  apply(document: vscode.TextDocument, info: FormatTargetInfo): Promise<boolean>;
 }
 
 export interface DocumentFormatPolicyLike {

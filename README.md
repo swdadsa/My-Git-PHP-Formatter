@@ -12,7 +12,8 @@ Format only the changed PHP lines from git diff. New PHP files are formatted as 
 - `myGitPhpFormatter.enabled`
 - `myGitPhpFormatter.formatOnSave`
 - `myGitPhpFormatter.skipMixedHtmlDocuments`
-- `myGitPhpFormatter.normalizeOperatorSpacing`
+- `myGitPhpFormatter.dGroupCustomRules.enabled`
+- `myGitPhpFormatter.dGroupCustomRules.operatorSpacing`
 - `myGitPhpFormatter.showNotifications`
 - `myGitPhpFormatter.debug`
 
@@ -22,13 +23,15 @@ Format only the changed PHP lines from git diff. New PHP files are formatted as 
 - If you want Intelephense to handle formatting, set it as the default PHP formatter in VS Code.
 - Format on save only affects the file that was just saved.
 - By default, files that look like mixed PHP/HTML templates are skipped to avoid full-file reformatting from range format providers.
-- Operator spacing normalization is optional and only affects real PHP operators in the formatted changed ranges.
+- D group custom rules are controlled by a group-level switch. Individual D group rules only run when `myGitPhpFormatter.dGroupCustomRules.enabled` is enabled.
+- D group operator spacing normalization is optional and only affects real PHP operators in the formatted changed ranges.
 
 ## Project Structure
 
 - `src/extension.ts`: extension activation entrypoint.
 - `src/container.ts`: wires services, use cases, and VS Code integration together.
 - `src/presentation/`: VS Code command and save-event entrypoints.
+- `src/application/customRules/`: custom formatting rules grouped by rule set.
 - `src/application/useCases/`: user-facing workflows such as formatting changed files or the current file.
 - `src/application/services/`: shared application workflow orchestration.
 - `src/application/policies/`: application-level decisions, such as whether a document should be skipped.
