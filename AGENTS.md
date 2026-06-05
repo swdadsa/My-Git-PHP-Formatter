@@ -27,11 +27,13 @@ Intelephense as the default PHP formatter in VS Code.
 - `src/container.ts`: dependency wiring for services, use cases, and adapters.
 - `src/constants.ts`: shared command IDs, setting keys, and extension constants.
 - `src/presentation/`: VS Code-facing command handlers and save-event handlers.
+- `src/application/customRules/`: D group custom formatting rules and rule registries.
 - `src/application/useCases/`: user-facing workflows such as formatting changed files, the current file, or a saved document.
 - `src/application/services/`: shared orchestration for formatting workflows.
 - `src/application/policies/`: application-level decisions, such as whether a document should be skipped.
 - `src/domain/mixedHtml/`: pure rules for detecting mixed PHP/HTML documents.
 - `src/domain/operatorSpacing/`: pure scanning and edit-planning logic for PHP operator spacing.
+- `src/domain/typeCastSpacing/`: pure scanning and edit-planning logic for PHP type cast spacing.
 - `src/domain/types/`: shared TypeScript contracts and data shapes.
 - `src/infrastructure/git/`: git diff and repository adapters.
 - `src/infrastructure/vscode/`: VS Code document, formatter, edit, and extension API adapters.
@@ -72,8 +74,14 @@ Package a pre-release VSIX:
 npm run package:vsix:pre-release
 ```
 
-`npm test` is currently a placeholder that exits with an error. Do not use it
-as a verification command unless tests are added and the script is updated.
+Run normalizer smoke tests:
+
+```sh
+npm test
+```
+
+`npm test` compiles TypeScript first, then runs `scripts/smoke-test-normalizers.js`
+against key operator spacing and type cast spacing edge cases.
 
 ## Architecture Rules
 
@@ -96,7 +104,8 @@ Application layer:
 Domain layer:
 
 - Contains pure logic that can be understood without VS Code, git, or filesystem context.
-- Should not import `vscode`.
+- Domain rule modules should not import `vscode`.
+- Shared service/type contracts may reference VS Code types only when they describe integration boundaries.
 - Should not read configuration, mutate documents, call git, or show notifications.
 - Is the preferred place for parsing, detection, edit planning, and other deterministic rules.
 
@@ -111,6 +120,15 @@ Dependency wiring:
 - Add new concrete services in `src/container.ts`.
 - Prefer constructor injection through existing contracts.
 - Keep service interfaces in `src/domain/types/` when they are shared across layers.
+
+D group custom rules:
+
+- Keep D group rule wrappers in `src/application/customRules/dGroup/`.
+- Keep pure scanner / edit-planning logic in `src/domain/<ruleName>/`.
+- Keep VS Code edit application in `src/infrastructure/vscode/`.
+- Wire new D group rules through `DGroupCustomRuleRegistry` in `src/container.ts`.
+- Each rule must have an individual setting under `myGitPhpFormatter.dGroupCustomRules.*`.
+- A D group rule should only run when both the group switch and the individual rule switch are enabled.
 
 ## Core Behavior To Preserve
 
@@ -141,15 +159,22 @@ When changing mixed document detection:
   unexpected formatting in templates; a false positive may skip a file the user
   expected to format.
 
-## Operator Spacing Normalization
+## D Group Custom Rule Normalization
 
-Operator spacing normalization is optional and controlled by
-`myGitPhpFormatter.normalizeOperatorSpacing`.
+D group custom formatting rules are optional and controlled by the group switch
+`myGitPhpFormatter.dGroupCustomRules.enabled`.
 
-When changing this feature:
+Current D group rules:
+
+- `myGitPhpFormatter.dGroupCustomRules.operatorSpacing`
+- `myGitPhpFormatter.dGroupCustomRules.typeCastSpacing`
+
+When changing these features:
 
 - Keep scanning and edit planning in `src/domain/operatorSpacing/`.
+- Keep type cast scanning and edit planning in `src/domain/typeCastSpacing/`.
 - Only affect operators inside the intended formatted changed ranges.
+- Only affect type casts inside the intended formatted changed ranges.
 - Avoid changing strings, comments, heredoc/nowdoc content, or unrelated text.
 - Preserve PHP-specific operators such as `=>`, `??`, `?->`, `::`, `===`, `!==`,
   `&&`, and `||` according to the feature's existing intent.
@@ -170,7 +195,9 @@ Current settings:
 - `myGitPhpFormatter.enabled`
 - `myGitPhpFormatter.formatOnSave`
 - `myGitPhpFormatter.skipMixedHtmlDocuments`
-- `myGitPhpFormatter.normalizeOperatorSpacing`
+- `myGitPhpFormatter.dGroupCustomRules.enabled`
+- `myGitPhpFormatter.dGroupCustomRules.operatorSpacing`
+- `myGitPhpFormatter.dGroupCustomRules.typeCastSpacing`
 - `myGitPhpFormatter.showNotifications`
 - `myGitPhpFormatter.debug`
 
@@ -220,8 +247,9 @@ Do not revert unrelated user changes in the working tree.
 3. Keep the edit in the smallest reasonable set of files.
 4. If the change touches extension metadata, update both `package.json` and constants/docs as needed.
 5. Compile with `npm run compile`.
-6. For packaging or release changes, run `npm run package:vsix`.
-7. Summarize behavior changes and any verification that was or was not run.
+6. Run `npm test` when changing custom formatter rules or domain normalizers.
+7. For packaging or release changes, run `npm run package:vsix`.
+8. Summarize behavior changes and any verification that was or was not run.
 
 ## Verification Checklist
 
@@ -229,6 +257,12 @@ Always run this before handoff when code changes are made:
 
 ```sh
 npm run compile
+```
+
+Run this when changing operator spacing, type cast spacing, or future custom rule normalizers:
+
+```sh
+npm test
 ```
 
 Run this when changing `package.json`, activation events, extension metadata,
@@ -245,12 +279,14 @@ Manual verification is useful for behavior changes:
 - Modify an existing PHP file and confirm only changed ranges are formatted.
 - Add a new PHP file and confirm full-document formatting works.
 - Try a mixed PHP/HTML file and confirm skip behavior follows the setting.
-- Toggle `myGitPhpFormatter.normalizeOperatorSpacing` and confirm only changed ranges are affected.
+- Toggle `myGitPhpFormatter.dGroupCustomRules.enabled` and confirm all D group rules follow the group switch.
+- Toggle `myGitPhpFormatter.dGroupCustomRules.operatorSpacing` and confirm only changed ranges are affected.
+- Toggle `myGitPhpFormatter.dGroupCustomRules.typeCastSpacing` and confirm only changed ranges are affected.
 - Toggle `myGitPhpFormatter.formatOnSave` and confirm only the saved file is processed.
 
 ## Known Limitations
 
-- There is currently no real test command.
+- Test coverage is currently limited to normalizer smoke tests.
 - Behavior relies on the active VS Code PHP formatter provider.
 - Range formatting behavior may differ between formatter providers.
 - Mixed PHP/HTML detection is a protective heuristic, not a full template parser.

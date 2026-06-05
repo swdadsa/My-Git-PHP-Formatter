@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import { DGroupCustomRuleRegistry } from "./application/customRules/dGroup/DGroupCustomRuleRegistry";
 import { OperatorSpacingRule } from "./application/customRules/dGroup/OperatorSpacingRule";
+import { TypeCastSpacingRule } from "./application/customRules/dGroup/TypeCastSpacingRule";
 import { CustomRuleRunner } from "./application/services/CustomRuleRunner";
 import { DocumentFormatPolicy } from "./application/policies/DocumentFormatPolicy";
 import { FormattingWorkflow } from "./application/services/FormattingWorkflow";
@@ -10,6 +11,7 @@ import { FormatSavedDocumentUseCase } from "./application/useCases/FormatSavedDo
 import { OUTPUT_CHANNEL_NAME } from "./constants";
 import { MixedHtmlDetector } from "./domain/mixedHtml/MixedHtmlDetector";
 import { OperatorSpacingNormalizer } from "./domain/operatorSpacing/OperatorSpacingNormalizer";
+import { TypeCastSpacingNormalizer } from "./domain/typeCastSpacing/TypeCastSpacingNormalizer";
 import { ConfigService } from "./infrastructure/config/ConfigService";
 import { GitChangeProvider } from "./infrastructure/git/GitChangeProvider";
 import { Logger } from "./infrastructure/logging/Logger";
@@ -17,6 +19,7 @@ import { Notifier } from "./infrastructure/notification/Notifier";
 import { VscodeDocumentService } from "./infrastructure/vscode/VscodeDocumentService";
 import { VscodeOperatorSpacingFixer } from "./infrastructure/vscode/VscodeOperatorSpacingFixer";
 import { VscodePhpFormatter } from "./infrastructure/vscode/VscodePhpFormatter";
+import { VscodeTypeCastSpacingFixer } from "./infrastructure/vscode/VscodeTypeCastSpacingFixer";
 
 export type ExtensionServices = {
   config: ConfigService;
@@ -43,6 +46,7 @@ export function createExtensionServices(): ExtensionServices {
   const gitChangeProvider = new GitChangeProvider(logger);
   const mixedHtmlDetector = new MixedHtmlDetector();
   const operatorSpacingNormalizer = new OperatorSpacingNormalizer();
+  const typeCastSpacingNormalizer = new TypeCastSpacingNormalizer();
   const documentPolicy = new DocumentFormatPolicy({
     config,
     logger,
@@ -57,12 +61,21 @@ export function createExtensionServices(): ExtensionServices {
     logger,
     normalizer: operatorSpacingNormalizer,
   });
+  const typeCastSpacingFixer = new VscodeTypeCastSpacingFixer({
+    documentService,
+    logger,
+    normalizer: typeCastSpacingNormalizer,
+  });
   const customRuleRegistry = new DGroupCustomRuleRegistry({
     config,
     rules: [
       new OperatorSpacingRule({
         config,
         fixer: operatorSpacingFixer,
+      }),
+      new TypeCastSpacingRule({
+        config,
+        fixer: typeCastSpacingFixer,
       }),
     ],
   });

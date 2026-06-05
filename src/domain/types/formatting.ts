@@ -35,6 +35,14 @@ export type FormatDocumentResult = {
 
 export type OperatorSpacingEdit = {
   operator: string;
+  replacement: string;
+  startOffset: number;
+  endOffset: number;
+  lineStarts: number[];
+};
+
+export type TypeCastSpacingEdit = {
+  replacement: string;
   startOffset: number;
   endOffset: number;
   lineStarts: number[];

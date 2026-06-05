@@ -1,8 +1,4 @@
-import {
-  ChangedRange,
-  OffsetRange,
-  OperatorSpacingEdit,
-} from "../types/formatting";
+import { ChangedRange, OffsetRange, TypeCastSpacingEdit } from "../types/formatting";
 
 const CODE_STATE = "code";
 const DOUBLE_QUOTE_STATE = "doubleQuote";
@@ -11,21 +7,18 @@ const LINE_COMMENT_STATE = "lineComment";
 const BLOCK_COMMENT_STATE = "blockComment";
 const SINGLE_QUOTE_STATE = "singleQuote";
 
-const DEFAULT_OPERATORS = [
-  "<=>",
-  "!==",
-  "===",
-  "=>",
-  "==",
-  "!=",
-  "<=",
-  ">=",
-  "??",
-  "&&",
-  "||",
-  "=",
-  "<",
-  ">",
+const DEFAULT_CAST_TYPES = [
+  "array",
+  "bool",
+  "boolean",
+  "double",
+  "float",
+  "int",
+  "integer",
+  "object",
+  "real",
+  "string",
+  "unset",
 ] as const;
 
 type ScannerState =
@@ -47,27 +40,32 @@ type HeredocStart = {
   nextIndex: number;
 };
 
-/**
- * Finds safe operator spacing edits inside PHP code ranges.
- */
-export class OperatorSpacingNormalizer {
-  private readonly operators: string[];
+type TypeCastMatch = {
+  castType: string;
+  closeParenOffset: number;
+};
 
-  constructor({ operators = DEFAULT_OPERATORS }: { operators?: readonly string[] } = {}) {
-    this.operators = [...operators].sort((left, right) => right.length - left.length);
+/**
+ * Finds safe type cast spacing edits inside PHP code ranges.
+ */
+export class TypeCastSpacingNormalizer {
+  private readonly castTypes: Set<string>;
+
+  constructor({ castTypes = DEFAULT_CAST_TYPES }: { castTypes?: readonly string[] } = {}) {
+    this.castTypes = new Set(castTypes.map((castType) => castType.toLowerCase()));
   }
 
   /**
    * Builds offset-based edits without touching strings, comments, or heredoc blocks.
    */
-  buildEdits(text: string, ranges: ChangedRange[]): OperatorSpacingEdit[] {
+  buildEdits(text: string, ranges: ChangedRange[]): TypeCastSpacingEdit[] {
     const lineStarts = getLineStarts(text);
     const targetOffsets = rangesToOffsets(ranges, lineStarts, text.length);
     const hasPhpTags = text.includes("<?");
     let inPhp = !hasPhpTags;
     let state: ScannerState = CODE_STATE;
     let heredocTerminator: string | null = null;
-    const edits: OperatorSpacingEdit[] = [];
+    const edits: TypeCastSpacingEdit[] = [];
 
     for (let index = 0; index < text.length; index += 1) {
       if (!inPhp) {
@@ -96,14 +94,12 @@ export class OperatorSpacingNormalizer {
         continue;
       }
 
-      const operator = findOperatorAt(text, index, this.operators);
-      if (state === CODE_STATE && operator) {
-        const edit = createOperatorEdit(text, index, operator, targetOffsets, lineStarts);
+      if (state === CODE_STATE && text[index] === "(") {
+        const edit = createTypeCastEdit(text, index, this.castTypes, targetOffsets, lineStarts);
         if (edit) {
           edits.push(edit);
+          index = edit.endOffset - 1;
         }
-
-        index += operator.length - 1;
       }
     }
 
@@ -248,83 +244,77 @@ function readHeredocStart(text: string, index: number): HeredocStart | null {
 }
 
 /**
- * Returns the configured operator that starts at an offset.
+ * Creates a replacement edit for one type cast when it is inside a changed range.
  */
-function findOperatorAt(text: string, offset: number, operators: string[]): string | undefined {
-  return operators.find((operator) => (
-    text.startsWith(operator, offset) && isStandaloneOperator(text, offset, operator)
-  ));
-}
-
-/**
- * Avoids treating pieces of longer operators as standalone operators.
- */
-function isStandaloneOperator(text: string, offset: number, operator: string): boolean {
-  const before = text[offset - 1] || "";
-  const after = text[offset + operator.length] || "";
-
-  if (operator === "=") {
-    return !["=", ">", "<", "!", "+", "-", "*", "/", "%", ".", "?", ":"].includes(before) &&
-      !["=", ">"].includes(after);
-  }
-
-  if (operator === "<") {
-    return !["<", "="].includes(after) && before !== "<";
-  }
-
-  if (operator === "<=") {
-    return after !== ">";
-  }
-
-  if (operator === ">") {
-    return ![">", "="].includes(after) && before !== "-";
-  }
-
-  if (operator === "??") {
-    return after !== "=";
-  }
-
-  return true;
-}
-
-/**
- * Creates a replacement edit for one operator when it is inside a changed range.
- */
-function createOperatorEdit(
+function createTypeCastEdit(
   text: string,
-  operatorOffset: number,
-  operator: string,
+  openParenOffset: number,
+  castTypes: Set<string>,
   targetOffsets: OffsetRange[],
   lineStarts: number[]
-): OperatorSpacingEdit | null {
-  if (!isOffsetInRanges(operatorOffset, targetOffsets)) {
+): TypeCastSpacingEdit | null {
+  if (!isOffsetInRanges(openParenOffset, targetOffsets)) {
     return null;
   }
 
-  const isLeadingOperator = isLineLeadingToken(text, operatorOffset);
-  const isTrailingOperator = isLineTrailingToken(text, operatorOffset + operator.length);
-  const startOffset = isLeadingOperator
-    ? operatorOffset
-    : findWhitespaceStart(text, operatorOffset);
-  const endOffset = isTrailingOperator
-    ? operatorOffset + operator.length
-    : findWhitespaceEnd(text, operatorOffset + operator.length);
-  const replacement = [
-    isLeadingOperator ? "" : " ",
-    operator,
-    isTrailingOperator ? "" : " ",
-  ].join("");
+  const match = readTypeCast(text, openParenOffset, castTypes);
+  if (!match) {
+    return null;
+  }
 
-  if (text.slice(startOffset, endOffset) === replacement) {
+  const endOffset = findWhitespaceEnd(text, match.closeParenOffset + 1);
+  const nextToken = text[endOffset] || "";
+  if (!canFollowTypeCast(nextToken)) {
+    return null;
+  }
+
+  const replacement = `(${match.castType}) `;
+
+  if (text.slice(openParenOffset, endOffset) === replacement) {
     return null;
   }
 
   return {
-    operator,
     replacement,
-    startOffset,
+    startOffset: openParenOffset,
     endOffset,
     lineStarts,
+  };
+}
+
+/**
+ * Reads a PHP type cast such as `( int )` or `(string)`.
+ */
+function readTypeCast(
+  text: string,
+  openParenOffset: number,
+  castTypes: Set<string>
+): TypeCastMatch | null {
+  let cursor = openParenOffset + 1;
+  cursor = skipHorizontalWhitespace(text, cursor);
+
+  const typeStart = cursor;
+  while (cursor < text.length && /[A-Za-z]/.test(text[cursor])) {
+    cursor += 1;
+  }
+
+  if (cursor === typeStart) {
+    return null;
+  }
+
+  const castType = text.slice(typeStart, cursor).toLowerCase();
+  if (!castTypes.has(castType)) {
+    return null;
+  }
+
+  cursor = skipHorizontalWhitespace(text, cursor);
+  if (text[cursor] !== ")") {
+    return null;
+  }
+
+  return {
+    castType,
+    closeParenOffset: cursor,
   };
 }
 
@@ -379,14 +369,14 @@ function isOffsetInRanges(offset: number, ranges: OffsetRange[]): boolean {
 }
 
 /**
- * Finds the first horizontal whitespace character before a token.
+ * Skips horizontal whitespace characters from an offset.
  */
-function findWhitespaceStart(text: string, offset: number): number {
-  let start = offset;
-  while (start > 0 && isHorizontalWhitespace(text[start - 1])) {
-    start -= 1;
+function skipHorizontalWhitespace(text: string, offset: number): number {
+  let cursor = offset;
+  while (cursor < text.length && isHorizontalWhitespace(text[cursor])) {
+    cursor += 1;
   }
-  return start;
+  return cursor;
 }
 
 /**
@@ -401,34 +391,11 @@ function findWhitespaceEnd(text: string, offset: number): number {
 }
 
 /**
- * Returns whether a token is the first non-whitespace token on its line.
+ * Returns whether the next token can plausibly be the expression being cast.
  */
-function isLineLeadingToken(text: string, offset: number): boolean {
-  for (let cursor = offset - 1; cursor >= 0; cursor -= 1) {
-    if (text[cursor] === "\n" || text[cursor] === "\r") {
-      return true;
-    }
-
-    if (!isHorizontalWhitespace(text[cursor])) {
-      return false;
-    }
-  }
-
-  return true;
-}
-
-/**
- * Returns whether a token is the last non-whitespace token on its line.
- */
-function isLineTrailingToken(text: string, offset: number): boolean {
-  for (let cursor = offset; cursor < text.length; cursor += 1) {
-    if (text[cursor] === "\n" || text[cursor] === "\r") {
-      return true;
-    }
-
-    if (!isHorizontalWhitespace(text[cursor])) {
-      return false;
-    }
+function canFollowTypeCast(character: string): boolean {
+  if (!character || ["\r", "\n", ";", ",", ")", "]", "}", ".", ":"].includes(character)) {
+    return false;
   }
 
   return true;

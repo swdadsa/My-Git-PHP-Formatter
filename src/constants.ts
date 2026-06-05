@@ -10,6 +10,7 @@ export const CONFIG_KEYS = {
   debug: "debug",
   dGroupCustomRulesEnabled: "dGroupCustomRules.enabled",
   dGroupOperatorSpacing: "dGroupCustomRules.operatorSpacing",
+  dGroupTypeCastSpacing: "dGroupCustomRules.typeCastSpacing",
   enabled: "enabled",
   formatOnSave: "formatOnSave",
   showNotifications: "showNotifications",

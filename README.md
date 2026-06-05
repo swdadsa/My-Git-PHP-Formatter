@@ -14,6 +14,7 @@ Format only the changed PHP lines from git diff. New PHP files are formatted as 
 - `myGitPhpFormatter.skipMixedHtmlDocuments`
 - `myGitPhpFormatter.dGroupCustomRules.enabled`
 - `myGitPhpFormatter.dGroupCustomRules.operatorSpacing`
+- `myGitPhpFormatter.dGroupCustomRules.typeCastSpacing`
 - `myGitPhpFormatter.showNotifications`
 - `myGitPhpFormatter.debug`
 
@@ -25,6 +26,7 @@ Format only the changed PHP lines from git diff. New PHP files are formatted as 
 - By default, files that look like mixed PHP/HTML templates are skipped to avoid full-file reformatting from range format providers.
 - D group custom rules are controlled by a group-level switch. Individual D group rules only run when `myGitPhpFormatter.dGroupCustomRules.enabled` is enabled.
 - D group operator spacing normalization is optional and only affects real PHP operators in the formatted changed ranges.
+- D group type cast spacing normalization is optional and only affects PHP casts such as `( int )$value` in the formatted changed ranges.
 
 ## Project Structure
 
@@ -37,6 +39,7 @@ Format only the changed PHP lines from git diff. New PHP files are formatted as 
 - `src/application/policies/`: application-level decisions, such as whether a document should be skipped.
 - `src/domain/mixedHtml/`: pure mixed PHP/HTML detection rules.
 - `src/domain/operatorSpacing/`: pure operator spacing scanning and edit planning.
+- `src/domain/typeCastSpacing/`: pure type cast spacing scanning and edit planning.
 - `src/domain/types/`: shared TypeScript data and service contracts.
 - `src/infrastructure/git/`: git repository and diff adapters.
 - `src/infrastructure/vscode/`: VS Code document, formatter, and edit adapters.
@@ -59,7 +62,9 @@ The project uses a lightweight layered architecture:
    `npm install`
 2. Compile TypeScript:
    `npm run compile`
-3. Create a VSIX:
+3. Run normalizer smoke tests:
+   `npm test`
+4. Create a VSIX:
    `npm run package:vsix`
-4. Install the generated `.vsix` in VS Code:
+5. Install the generated `.vsix` in VS Code:
    `Extensions: Install from VSIX...`

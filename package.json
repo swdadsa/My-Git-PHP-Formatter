@@ -1,6 +1,6 @@
 {
   "name": "my-git-php-formatter",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "Format changed PHP lines from git diff and optionally run on save.",
   "displayName": "My Git PHP Formatter",
   "publisher": "finn",
@@ -22,7 +22,7 @@
     "watch": "tsc -watch -p ./",
     "package:vsix": "npm run compile && vsce package --allow-missing-repository",
     "package:vsix:pre-release": "npm run compile && vsce package --pre-release --allow-missing-repository",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "npm run compile && node scripts/smoke-test-normalizers.js"
   },
   "contributes": {
     "commands": [
@@ -62,6 +62,11 @@
           "type": "boolean",
           "default": true,
           "description": "Normalize whitespace around common PHP operators such as =, ===, =>, ??, &&, and || as part of D group custom rules."
+        },
+        "myGitPhpFormatter.dGroupCustomRules.typeCastSpacing": {
+          "type": "boolean",
+          "default": true,
+          "description": "Normalize PHP type cast spacing such as ( int )$value to (int) $value as part of D group custom rules."
         },
         "myGitPhpFormatter.showNotifications": {
           "type": "boolean",

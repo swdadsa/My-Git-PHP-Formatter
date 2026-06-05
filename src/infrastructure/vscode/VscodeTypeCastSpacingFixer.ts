@@ -3,37 +3,38 @@ import { FormatTargetInfo } from "../../domain/types/formatting";
 import {
   DocumentServiceLike,
   LoggerLike,
-  OperatorSpacingFixerLike,
-  OperatorSpacingNormalizerLike,
+  TypeCastSpacingFixerLike,
+  TypeCastSpacingNormalizerLike,
 } from "../../domain/types/services";
+import { offsetToPosition } from "./VscodeOperatorSpacingFixer";
 import { getTargetRanges } from "./formatTargetRanges";
 
-type VscodeOperatorSpacingFixerDependencies = {
+type VscodeTypeCastSpacingFixerDependencies = {
   documentService: DocumentServiceLike;
   logger: LoggerLike;
-  normalizer: OperatorSpacingNormalizerLike;
+  normalizer: TypeCastSpacingNormalizerLike;
 };
 
 /**
- * Applies domain-generated operator spacing edits through the VS Code API.
+ * Applies domain-generated type cast spacing edits through the VS Code API.
  */
-export class VscodeOperatorSpacingFixer implements OperatorSpacingFixerLike {
+export class VscodeTypeCastSpacingFixer implements TypeCastSpacingFixerLike {
   private readonly documentService: DocumentServiceLike;
   private readonly logger: LoggerLike;
-  private readonly normalizer: OperatorSpacingNormalizerLike;
+  private readonly normalizer: TypeCastSpacingNormalizerLike;
 
   constructor({
     documentService,
     logger,
     normalizer,
-  }: VscodeOperatorSpacingFixerDependencies) {
+  }: VscodeTypeCastSpacingFixerDependencies) {
     this.documentService = documentService;
     this.logger = logger;
     this.normalizer = normalizer;
   }
 
   /**
-   * Normalizes whitespace around configured PHP operators after formatter edits.
+   * Normalizes PHP type cast spacing after formatter edits.
    */
   async normalize(document: vscode.TextDocument, info: FormatTargetInfo): Promise<boolean> {
     if (!this.documentService.isPhpFileDocument(document)) {
@@ -66,31 +67,11 @@ export class VscodeOperatorSpacingFixer implements OperatorSpacingFixerLike {
     }
 
     this.logger.log(
-      `Normalized ${edits.length} operator spacing occurrence(s) in ${activeDocument.uri.fsPath}`
+      `Normalized ${edits.length} type cast spacing occurrence(s) in ${activeDocument.uri.fsPath}`
     );
 
     const latestDocument = await this.documentService.openDocument(activeDocument.uri);
     await latestDocument.save();
     return true;
   }
-}
-
-/**
- * Converts an absolute text offset into a VS Code position.
- */
-export function offsetToPosition(offset: number, lineStarts: number[]): vscode.Position {
-  let low = 0;
-  let high = lineStarts.length - 1;
-
-  while (low <= high) {
-    const middle = Math.floor((low + high) / 2);
-    if (lineStarts[middle] <= offset) {
-      low = middle + 1;
-    } else {
-      high = middle - 1;
-    }
-  }
-
-  const line = Math.max(high, 0);
-  return new vscode.Position(line, offset - lineStarts[line]);
 }

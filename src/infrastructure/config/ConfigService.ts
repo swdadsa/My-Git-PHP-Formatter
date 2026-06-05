@@ -56,6 +56,13 @@ export class ConfigService implements ConfigReader {
   }
 
   /**
+   * Returns whether the D group type cast spacing rule should run.
+   */
+  shouldRunDGroupTypeCastSpacingRule(): boolean {
+    return this.getConfig().get(CONFIG_KEYS.dGroupTypeCastSpacing, true);
+  }
+
+  /**
    * Returns whether the save hook should run.
    */
   shouldFormatOnSave(): boolean {

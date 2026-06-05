@@ -6,6 +6,7 @@ import {
   FormatDocumentResult,
   FormatTargetInfo,
   OperatorSpacingEdit,
+  TypeCastSpacingEdit,
 } from "./formatting";
 
 export interface ConfigReader {
@@ -14,6 +15,7 @@ export interface ConfigReader {
   shouldFormatOnSave(): boolean;
   shouldRunDGroupCustomRules(): boolean;
   shouldRunDGroupOperatorSpacingRule(): boolean;
+  shouldRunDGroupTypeCastSpacingRule(): boolean;
   shouldShowNotifications(): boolean;
   shouldSkipMixedHtmlDocuments(): boolean;
 }
@@ -50,6 +52,14 @@ export interface OperatorSpacingFixerLike {
 
 export interface OperatorSpacingNormalizerLike {
   buildEdits(text: string, ranges: ChangedRange[]): OperatorSpacingEdit[];
+}
+
+export interface TypeCastSpacingFixerLike {
+  normalize(document: vscode.TextDocument, info: FormatTargetInfo): Promise<boolean>;
+}
+
+export interface TypeCastSpacingNormalizerLike {
+  buildEdits(text: string, ranges: ChangedRange[]): TypeCastSpacingEdit[];
 }
 
 export interface CustomFormattingRuleLike {

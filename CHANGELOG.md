@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.2] - 2026-06-05
+
+### Added
+
+- Added `dGroupCustomRules.typeCastSpacing` to normalize PHP type cast spacing in changed ranges.
+- Added normalizer smoke tests for operator spacing and type cast spacing edge cases.
+
+### Changed
+
+- Added a second D group rule implementation path for type cast spacing.
+- Preserved indentation for leading multiline operators such as `||`.
+- Preserved PHP spaceship operator `<=>` as one operator token.
+
 ## [1.2.1] - 2026-04-28
 
 ### Added
