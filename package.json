@@ -1,6 +1,6 @@
 {
   "name": "my-git-php-formatter",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "description": "Format changed PHP lines from git diff and optionally run on save.",
   "displayName": "My Git PHP Formatter",
   "publisher": "finn",
@@ -18,7 +18,8 @@
     "onLanguage:php"
   ],
   "scripts": {
-    "compile": "tsc -p ./",
+    "clean": "rm -rf dist",
+    "compile": "npm run clean && tsc -p ./",
     "watch": "tsc -watch -p ./",
     "package:vsix": "npm run compile && vsce package --allow-missing-repository",
     "package:vsix:pre-release": "npm run compile && vsce package --pre-release --allow-missing-repository",
@@ -40,43 +41,70 @@
       "properties": {
         "myGitPhpFormatter.enabled": {
           "type": "boolean",
+          "order": 1,
           "default": true,
           "description": "Enable My Git PHP Formatter."
         },
+        "myGitPhpFormatter.dGroupCustomRules.mode": {
+          "type": "string",
+          "order": 2,
+          "enum": [
+            "off",
+            "all",
+            "custom"
+          ],
+          "enumDescriptions": [
+            "Disable all D group custom rules.",
+            "Run every D group custom rule.",
+            "Run only the D group rules listed in enabledRules."
+          ],
+          "default": "all",
+          "description": "Controls how D group custom formatting rules are applied."
+        },
+        "myGitPhpFormatter.dGroupCustomRules.enabledRules": {
+          "type": "array",
+          "order": 3,
+          "default": [
+            "operatorSpacing",
+            "typeCastSpacing"
+          ],
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": [
+              "operatorSpacing",
+              "typeCastSpacing"
+            ],
+            "enumDescriptions": [
+              "Normalize whitespace around common PHP operators such as =, ===, =>, ??, &&, and ||.",
+              "Normalize PHP type cast spacing such as ( int )$value to (int) $value."
+            ]
+          },
+          "description": "D group custom rules used when dGroupCustomRules.mode is set to custom."
+        },
         "myGitPhpFormatter.formatOnSave": {
           "type": "boolean",
-          "default": false,
+          "order": 4,
+          "default": true,
           "description": "Format only the changed PHP lines of the saved file. New files are formatted as a whole document."
         },
         "myGitPhpFormatter.skipMixedHtmlDocuments": {
           "type": "boolean",
+          "order": 5,
           "default": true,
           "description": "Skip formatting PHP files that appear to contain substantial HTML markup."
         },
-        "myGitPhpFormatter.dGroupCustomRules.enabled": {
+        "myGitPhpFormatter.debug": {
           "type": "boolean",
+          "order": 6,
           "default": false,
-          "description": "Enable D group custom formatting rules."
-        },
-        "myGitPhpFormatter.dGroupCustomRules.operatorSpacing": {
-          "type": "boolean",
-          "default": true,
-          "description": "Normalize whitespace around common PHP operators such as =, ===, =>, ??, &&, and || as part of D group custom rules."
-        },
-        "myGitPhpFormatter.dGroupCustomRules.typeCastSpacing": {
-          "type": "boolean",
-          "default": true,
-          "description": "Normalize PHP type cast spacing such as ( int )$value to (int) $value as part of D group custom rules."
+          "description": "Write verbose logs to the My Git PHP Formatter output channel."
         },
         "myGitPhpFormatter.showNotifications": {
           "type": "boolean",
+          "order": 7,
           "default": true,
           "description": "Show information and warning messages for manual commands."
-        },
-        "myGitPhpFormatter.debug": {
-          "type": "boolean",
-          "default": false,
-          "description": "Write verbose logs to the My Git PHP Formatter output channel."
         }
       }
     }

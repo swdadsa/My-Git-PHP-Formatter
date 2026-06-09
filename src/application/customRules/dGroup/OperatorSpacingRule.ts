@@ -1,13 +1,12 @@
 import * as vscode from "vscode";
+import { D_GROUP_RULE_IDS } from "../../../constants";
 import { FormatTargetInfo } from "../../../domain/types/formatting";
 import {
-  ConfigReader,
   CustomFormattingRuleLike,
   OperatorSpacingFixerLike,
 } from "../../../domain/types/services";
 
 type OperatorSpacingRuleDependencies = {
-  config: ConfigReader;
   fixer: OperatorSpacingFixerLike;
 };
 
@@ -15,21 +14,12 @@ type OperatorSpacingRuleDependencies = {
  * D group rule that normalizes spacing around selected PHP operators.
  */
 export class OperatorSpacingRule implements CustomFormattingRuleLike {
-  readonly id = "dGroup.operatorSpacing";
+  readonly id = D_GROUP_RULE_IDS.operatorSpacing;
 
-  private readonly config: ConfigReader;
   private readonly fixer: OperatorSpacingFixerLike;
 
-  constructor({ config, fixer }: OperatorSpacingRuleDependencies) {
-    this.config = config;
+  constructor({ fixer }: OperatorSpacingRuleDependencies) {
     this.fixer = fixer;
-  }
-
-  /**
-   * Returns whether this individual D group rule is enabled.
-   */
-  isEnabled(): boolean {
-    return this.config.shouldRunDGroupOperatorSpacingRule();
   }
 
   /**

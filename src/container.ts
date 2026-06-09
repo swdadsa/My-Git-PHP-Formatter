@@ -70,11 +70,9 @@ export function createExtensionServices(): ExtensionServices {
     config,
     rules: [
       new OperatorSpacingRule({
-        config,
         fixer: operatorSpacingFixer,
       }),
       new TypeCastSpacingRule({
-        config,
         fixer: typeCastSpacingFixer,
       }),
     ],

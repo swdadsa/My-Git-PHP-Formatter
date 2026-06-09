@@ -3,6 +3,7 @@ import {
   CustomFormattingRuleLike,
   CustomRuleRegistryLike,
 } from "../../../domain/types/services";
+import { D_GROUP_CUSTOM_RULE_MODES } from "../../../constants";
 
 type DGroupCustomRuleRegistryDependencies = {
   config: ConfigReader;
@@ -22,13 +23,21 @@ export class DGroupCustomRuleRegistry implements CustomRuleRegistryLike {
   }
 
   /**
-   * Returns enabled D group rules only when the group-level switch is enabled.
+   * Returns D group rules according to the selected mode.
    */
   getEnabledRules(): CustomFormattingRuleLike[] {
-    if (!this.config.shouldRunDGroupCustomRules()) {
+    const mode = this.config.getDGroupCustomRulesMode();
+
+    if (mode === D_GROUP_CUSTOM_RULE_MODES.off) {
       return [];
     }
 
-    return this.rules.filter((rule) => rule.isEnabled());
+    if (mode === D_GROUP_CUSTOM_RULE_MODES.all) {
+      return this.rules;
+    }
+
+    const enabledRuleIds = new Set(this.config.getDGroupEnabledRuleIds());
+
+    return this.rules.filter((rule) => enabledRuleIds.has(rule.id));
   }
 }

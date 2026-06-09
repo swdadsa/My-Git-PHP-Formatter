@@ -7,12 +7,23 @@ export const COMMANDS = {
 } as const;
 
 export const CONFIG_KEYS = {
-  debug: "debug",
-  dGroupCustomRulesEnabled: "dGroupCustomRules.enabled",
-  dGroupOperatorSpacing: "dGroupCustomRules.operatorSpacing",
-  dGroupTypeCastSpacing: "dGroupCustomRules.typeCastSpacing",
   enabled: "enabled",
+  dGroupCustomRulesMode: "dGroupCustomRules.mode",
+  dGroupEnabledRules: "dGroupCustomRules.enabledRules",
   formatOnSave: "formatOnSave",
-  showNotifications: "showNotifications",
   skipMixedHtmlDocuments: "skipMixedHtmlDocuments",
+  debug: "debug",
+  showNotifications: "showNotifications",
+  legacyDGroupCustomRulesEnabled: "dGroupCustomRules.enabled",
+} as const;
+
+export const D_GROUP_CUSTOM_RULE_MODES = {
+  all: "all",
+  custom: "custom",
+  off: "off",
+} as const;
+
+export const D_GROUP_RULE_IDS = {
+  operatorSpacing: "operatorSpacing",
+  typeCastSpacing: "typeCastSpacing",
 } as const;

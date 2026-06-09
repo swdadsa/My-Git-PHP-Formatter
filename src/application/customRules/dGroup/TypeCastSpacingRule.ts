@@ -1,13 +1,12 @@
 import * as vscode from "vscode";
+import { D_GROUP_RULE_IDS } from "../../../constants";
 import { FormatTargetInfo } from "../../../domain/types/formatting";
 import {
-  ConfigReader,
   CustomFormattingRuleLike,
   TypeCastSpacingFixerLike,
 } from "../../../domain/types/services";
 
 type TypeCastSpacingRuleDependencies = {
-  config: ConfigReader;
   fixer: TypeCastSpacingFixerLike;
 };
 
@@ -15,21 +14,12 @@ type TypeCastSpacingRuleDependencies = {
  * D group rule that normalizes spacing around PHP type casts.
  */
 export class TypeCastSpacingRule implements CustomFormattingRuleLike {
-  readonly id = "dGroup.typeCastSpacing";
+  readonly id = D_GROUP_RULE_IDS.typeCastSpacing;
 
-  private readonly config: ConfigReader;
   private readonly fixer: TypeCastSpacingFixerLike;
 
-  constructor({ config, fixer }: TypeCastSpacingRuleDependencies) {
-    this.config = config;
+  constructor({ fixer }: TypeCastSpacingRuleDependencies) {
     this.fixer = fixer;
-  }
-
-  /**
-   * Returns whether this individual D group rule is enabled.
-   */
-  isEnabled(): boolean {
-    return this.config.shouldRunDGroupTypeCastSpacingRule();
   }
 
   /**

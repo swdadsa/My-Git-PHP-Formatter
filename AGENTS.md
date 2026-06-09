@@ -127,8 +127,10 @@ D group custom rules:
 - Keep pure scanner / edit-planning logic in `src/domain/<ruleName>/`.
 - Keep VS Code edit application in `src/infrastructure/vscode/`.
 - Wire new D group rules through `DGroupCustomRuleRegistry` in `src/container.ts`.
-- Each rule must have an individual setting under `myGitPhpFormatter.dGroupCustomRules.*`.
-- A D group rule should only run when both the group switch and the individual rule switch are enabled.
+- Add each rule ID to `D_GROUP_RULE_IDS` in `src/constants.ts`.
+- Keep D group selection centralized in `DGroupCustomRuleRegistry`.
+- `myGitPhpFormatter.dGroupCustomRules.mode` controls whether D group rules are off, all enabled, or custom-selected.
+- `myGitPhpFormatter.dGroupCustomRules.enabledRules` controls which rules run only when mode is `custom`.
 
 ## Core Behavior To Preserve
 
@@ -161,13 +163,13 @@ When changing mixed document detection:
 
 ## D Group Custom Rule Normalization
 
-D group custom formatting rules are optional and controlled by the group switch
-`myGitPhpFormatter.dGroupCustomRules.enabled`.
+D group custom formatting rules are optional and controlled by
+`myGitPhpFormatter.dGroupCustomRules.mode`.
 
 Current D group rules:
 
-- `myGitPhpFormatter.dGroupCustomRules.operatorSpacing`
-- `myGitPhpFormatter.dGroupCustomRules.typeCastSpacing`
+- `operatorSpacing`
+- `typeCastSpacing`
 
 When changing these features:
 
@@ -193,13 +195,12 @@ Current commands:
 Current settings:
 
 - `myGitPhpFormatter.enabled`
+- `myGitPhpFormatter.dGroupCustomRules.mode`
+- `myGitPhpFormatter.dGroupCustomRules.enabledRules`
 - `myGitPhpFormatter.formatOnSave`
 - `myGitPhpFormatter.skipMixedHtmlDocuments`
-- `myGitPhpFormatter.dGroupCustomRules.enabled`
-- `myGitPhpFormatter.dGroupCustomRules.operatorSpacing`
-- `myGitPhpFormatter.dGroupCustomRules.typeCastSpacing`
-- `myGitPhpFormatter.showNotifications`
 - `myGitPhpFormatter.debug`
+- `myGitPhpFormatter.showNotifications`
 
 When adding a setting:
 
@@ -207,6 +208,7 @@ When adding a setting:
 - Add or reuse a constant in `src/constants.ts`.
 - Read it through the config service.
 - Document it in `README.md` if it is user-facing.
+- Use the `order` property in `package.json` when the Settings UI display order matters.
 
 When adding a command:
 
@@ -279,9 +281,9 @@ Manual verification is useful for behavior changes:
 - Modify an existing PHP file and confirm only changed ranges are formatted.
 - Add a new PHP file and confirm full-document formatting works.
 - Try a mixed PHP/HTML file and confirm skip behavior follows the setting.
-- Toggle `myGitPhpFormatter.dGroupCustomRules.enabled` and confirm all D group rules follow the group switch.
-- Toggle `myGitPhpFormatter.dGroupCustomRules.operatorSpacing` and confirm only changed ranges are affected.
-- Toggle `myGitPhpFormatter.dGroupCustomRules.typeCastSpacing` and confirm only changed ranges are affected.
+- Set `myGitPhpFormatter.dGroupCustomRules.mode` to `all` and confirm all D group rules run.
+- Set `myGitPhpFormatter.dGroupCustomRules.mode` to `custom` and confirm only rules listed in `enabledRules` run.
+- Set `myGitPhpFormatter.dGroupCustomRules.mode` to `off` and confirm D group rules do not run.
 - Toggle `myGitPhpFormatter.formatOnSave` and confirm only the saved file is processed.
 
 ## Known Limitations

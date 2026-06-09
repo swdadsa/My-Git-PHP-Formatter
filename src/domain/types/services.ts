@@ -9,13 +9,14 @@ import {
   TypeCastSpacingEdit,
 } from "./formatting";
 
+export type DGroupCustomRulesMode = "off" | "all" | "custom";
+
 export interface ConfigReader {
   isDebugEnabled(): boolean;
   isExtensionEnabled(): boolean;
+  getDGroupCustomRulesMode(): DGroupCustomRulesMode;
+  getDGroupEnabledRuleIds(): string[];
   shouldFormatOnSave(): boolean;
-  shouldRunDGroupCustomRules(): boolean;
-  shouldRunDGroupOperatorSpacingRule(): boolean;
-  shouldRunDGroupTypeCastSpacingRule(): boolean;
   shouldShowNotifications(): boolean;
   shouldSkipMixedHtmlDocuments(): boolean;
 }
@@ -65,7 +66,6 @@ export interface TypeCastSpacingNormalizerLike {
 export interface CustomFormattingRuleLike {
   readonly id: string;
   apply(document: vscode.TextDocument, info: FormatTargetInfo): Promise<boolean>;
-  isEnabled(): boolean;
 }
 
 export interface CustomRuleRegistryLike {

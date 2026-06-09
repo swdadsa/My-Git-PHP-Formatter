@@ -10,23 +10,33 @@ Format only the changed PHP lines from git diff. New PHP files are formatted as 
 ## Settings
 
 - `myGitPhpFormatter.enabled`
+- `myGitPhpFormatter.dGroupCustomRules.mode`
+- `myGitPhpFormatter.dGroupCustomRules.enabledRules`
 - `myGitPhpFormatter.formatOnSave`
 - `myGitPhpFormatter.skipMixedHtmlDocuments`
-- `myGitPhpFormatter.dGroupCustomRules.enabled`
-- `myGitPhpFormatter.dGroupCustomRules.operatorSpacing`
-- `myGitPhpFormatter.dGroupCustomRules.typeCastSpacing`
-- `myGitPhpFormatter.showNotifications`
 - `myGitPhpFormatter.debug`
+- `myGitPhpFormatter.showNotifications`
 
 ## Notes
 
 - This extension formats PHP files by calling the active VS Code formatter provider.
 - If you want Intelephense to handle formatting, set it as the default PHP formatter in VS Code.
-- Format on save only affects the file that was just saved.
+- Format on save is enabled by default and only affects the file that was just saved.
 - By default, files that look like mixed PHP/HTML templates are skipped to avoid full-file reformatting from range format providers.
-- D group custom rules are controlled by a group-level switch. Individual D group rules only run when `myGitPhpFormatter.dGroupCustomRules.enabled` is enabled.
-- D group operator spacing normalization is optional and only affects real PHP operators in the formatted changed ranges.
-- D group type cast spacing normalization is optional and only affects PHP casts such as `( int )$value` in the formatted changed ranges.
+- D group custom rules are controlled by `myGitPhpFormatter.dGroupCustomRules.mode`.
+- D group mode defaults to `all`; set it to `off` to disable every D group rule, or `custom` to run only the rules listed in `myGitPhpFormatter.dGroupCustomRules.enabledRules`.
+- In `custom` mode, use rule IDs such as `operatorSpacing` and `typeCastSpacing`.
+- D group operator spacing normalization only affects real PHP operators in the formatted changed ranges.
+- D group type cast spacing normalization only affects PHP casts such as `( int )$value` in the formatted changed ranges.
+
+Example custom D group configuration:
+
+```json
+{
+  "myGitPhpFormatter.dGroupCustomRules.mode": "custom",
+  "myGitPhpFormatter.dGroupCustomRules.enabledRules": ["operatorSpacing"]
+}
+```
 
 ## Project Structure
 

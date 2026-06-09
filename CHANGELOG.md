@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.3] - 2026-06-09
+
+### Changed
+
+- Replaced separate D group boolean switches with `dGroupCustomRules.mode` and `dGroupCustomRules.enabledRules`.
+- Added a migration fallback so the legacy `dGroupCustomRules.enabled` setting still maps to all D group rules.
+- Changed D group custom rules to default to `all`.
+- Changed format on save to default to enabled.
+- Reordered extension settings so D group mode and enabled rules are grouped together.
+
 ## [1.2.2] - 2026-06-05
 
 ### Added
